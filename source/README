@@ -1,0 +1,33 @@
+This is all the different applications that can be used for the truck.
+
+android - this directory contains the client application for android devices.  You can
+install this app on your phone or any other android powered device and control the truck 
+
+controllercode - this contains the code that runs on the arduino microcontroller that is 
+mounted in the truck.
+
+java - This is the remote control client written in java
+
+perl - There are several scripts in this directory.  
+	server.pl - this is the actual server.  This needs to be running on a 
+			pandaboard/beagleboard, laptop, netbook, or any other linux powered device.
+			The arduino needs to be plugged into this device.  So, whatever device you choose
+			to mount in the vehicle, it has to have a usb port.
+	client.pl - this is the remote control client written in perl.  It uses the SDL library.
+	server_debug.pl - this is just a debugging script.  If the arduino isn't plugged in, you can 
+			run this script to test out the controls from any of the clients and you can 
+			test out the network connections from the clients
+	gps.pl - this is a program that reads gps coordinates from a gps module.  This script
+			isn't related to the server code or any of the clients for the truck.
+
+python - client.py, this is the client written in python.  However, this client is old and hasn't
+	been re-written for the new server.pl application.  
+
+qt - These are the client programs written in qt.  there are two directories in here, one for each application.  Each application has its own
+	purpose
+	remotecontrol - this is the main client,  it has controls for the vehicle and the air soft
+		turret that is mounted on the truck
+	vehicle_controls - this is the other client that only has the controls for the vehicle.  This 
+		client is identical to the remotecontrol one, except the turret buttons on the gui 
+		have their setVisible attributes set to false.
+			

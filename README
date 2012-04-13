@@ -1,0 +1,17 @@
+
+Here are the descriptions of the directories here:
+
+arduino-0021 - this contains the arduino IDE.  If you have the ide already, you don't really 
+	need this.
+
+documentation - this program was a senior project.  The documentation for the source code isn't
+	up to date in the files in this folder.  
+
+source - this is where all the functionality lives. Theres a README file in this directory 
+	that describes the server and all the different clients.  
+
+All the code under the source directory is under the GPLv3.  The license is in all the various 
+	sub-directories under the source directory.  You can get a copy of the license from
+	http://www.gnu.org/licenses/gpl.html
+
+
