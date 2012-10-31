@@ -7,10 +7,14 @@ use Net::Address::IP::Local;
 #make stdout unbuffered
 $| = 1; 
 
-my $ip = Net::Address::IP::Local->public_ipv4;
-#print "ip address: $ip\n";
-
-#$host = '157.182.180.81';
+#my $ip = Net::Address::IP::Local->public_ipv4;
+$ip = "127.0.0.1";
+eval 
+{
+	$ip = Net::Address::IP::Local->public;
+};
+#warn "no ip address, $@ \n";
+warn "no ip address, using $ip instead\n";
 
 $host = $ip;
 $port = '4201';

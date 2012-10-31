@@ -7,7 +7,13 @@ use Net::Address::IP::Local;
 #make stdout unbuffered
 $| = 1; 
 
-my $ip = Net::Address::IP::Local->public_ipv4;
+$ip = "127.0.0.1";
+eval 
+{
+	$ip = Net::Address::IP::Local->public;
+};
+#warn "no ip address, $@ \n";
+warn "no ip address, using $ip instead\n";
 
 $host = $ip;
 $port = '4201';
@@ -19,12 +25,16 @@ my $socket = new IO::Socket::INET (
 	Listen		=>	1,
 	ReuseAddr	=>	1, 
 );
+if ($socket)
+{
+	print "socket isn't cxreated\n";
+}
 die "could not create socket: $!\n" unless $socket;
 
 # Set up the serial port
 # 19200, 81N on the USB ftdi driver
 
-@whichdevice = qw(/dev/ttyUSB0 /dev/ttyUSB1 /dev/ttyACM0 /dev/ttyACM1);
+@whichdevice = qw(/dev/ttyUSB0 /dev/ttyUSB1 /dev/ttyUSB2 /dev/ttyACM0 /dev/ttyACM1);
 $serialport= "";
 foreach $s(@whichdevice)
 {
