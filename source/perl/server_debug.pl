@@ -1,5 +1,9 @@
 #!/usr/bin/perl
 
+#this is just a debug script, it does the same thing as the server.pl script,
+#except you don't need the microcontroller plugged into the computer.
+#You can use this to debug the client.
+
 use IO::Socket;
 use Device::SerialPort;
 use Net::Address::IP::Local;
@@ -21,7 +25,7 @@ $port = '4201';
 
 my $socket = new IO::Socket::INET (
 	LocalHost 	=>	$host,
-	LocalPort	=>	$port,
+	LocalPort		=>	$port,
 	Proto		=>	'tcp',
 	Listen		=>	1,
 	Reuse		=>	1, 
@@ -30,6 +34,13 @@ die "could not create socket: $!\n" unless $socket;
 
 # Set up the serial port
 # 19200, 81N on the USB ftdi driver
+
+#typed in the list of possible devices.  I just started typing 
+#them in as my linux box picked them up. 
+
+#The ones with usb are for the controllers that use the ftdi usb chips
+#The acm ones are for the controllers that use the atmega16u2 or the atmega8u2
+#programmed as a usb to serial converter
 
 @whichdevice = qw(/dev/ttyUSB0 /dev/ttyUSB1 /dev/ttyACM0 /dev/ttyACM1);
 $serialport= "";
@@ -52,10 +63,10 @@ foreach $s(@whichdevice)
 		print "whats the deal\n";
 	}
 }
-if (!$serialport)
-{
+#if (!$serialport)
+#{
 	#die "cannot connect to the serial port!\n";
-}
+#}
 
 $v_fb = 1;
 $v_lr = 3;
@@ -67,6 +78,10 @@ print "ip address:\t",$host,"\n";
 print "port number:\t",$port,"\n";
 
 print "\nwaiting for a connection....\n";
+
+#this function sends data out the serial port
+#it turns each character in the string into a char and
+#send them out the serial port
 
 sub sendcommand
 {
@@ -89,10 +104,32 @@ sub sendcommand
 #my $newsocket = $socket->accept();
 #$input = "";
 #while (<$newsocket>)
+
+#BVF - begin vehicle forward
+#EVF - end vehicle forward
+#BVB - begin vehicle backward
+#EVB - end vehicle backward
+#BVL - begin vehicle left
+#BVR - begin vehicle right
+#EVL - end vehicle left
+#EVR - end vehicle right
+#BTL - begin turret left
+#ETL - end turret left
+#BTR - begin turret right
+#ETR - end turret right
+#BTU - begin turret up
+#ETU - end turret up
+#BTD - begin turret down
+#ETD - end turret down
+#SF - start firing
+#EF - end firing
+
 while($newsocket = $socket->accept())
 {
 	print "connection from ",$newsocket->peerhost(),"\n";
 	
+	#wait for a command to come in, then decide what command to 
+	#send to the serial port based on the incoming string
 	while (<$newsocket>)
 	{
 		$_ =~ s/[\r\n]+//;
