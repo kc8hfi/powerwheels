@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-	<string name="app_name">Remote control</string>
-    <string name="vehicle_title">Vehicle Controls</string>
-    <string name="turret_title">Turret Controls</string>
-    <string name="fire_button_label">Fire!</string>
-    <string name="ip_addr_label">IP Address</string>
-    <string name="port_label">Port</string>
-</resources>
