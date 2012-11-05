@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="wrap_content"
+	android:layout_height="fill_parent"
+	android:stretchColumns="*"
+	>
+	<TableRow>
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/ip_address"
+			android:layout_span="4"
+		/>
+	</TableRow>
+	<TableRow>
+		<EditText
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:numeric="integer"
+			android:id="@+id/ip_part1"
+			android:hint="@string/ip_part1_hint"
+			android:text="157"
+		/>
+		<EditText
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:numeric="integer"
+			android:id="@+id/ip_part2"
+			android:hint="@string/ip_part2_hint"
+			android:text="182"
+		/>
+		<EditText
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:numeric="integer"
+			android:id="@+id/ip_part3"
+			android:hint="@string/ip_part3_hint"
+			android:text="180"
+		/>
+		<EditText
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:numeric="integer"
+			android:id="@+id/ip_part4"
+			android:hint="@string/ip_part4_hint"
+			android:text="86"
+		/>
+	</TableRow>
+	<TableRow>
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/port"
+		/>
+	</TableRow>
+	<TableRow>
+		<EditText
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:numeric="integer"
+			android:id="@+id/port"
+			android:hint="@string/port_hint"
+			android:text="4201"
+		/>
+	</TableRow>
+	<TableRow>
+<!-- 		android:layout_span="5" -->
+		<Button 
+			android:layout_width="wrap_content" 
+			android:layout_height="wrap_content"
+			android:text="@string/connect_text" 
+			android:id="@+id/connect_button" 
+			android:layout_span="3"
+			android:onClick="connect"
+		/>
+		<Button
+			android:layout_width="wrap_content" 
+			android:layout_height="wrap_content"
+			android:text="@string/reset_text" 
+			android:id="@+id/reset_button"
+			android:layout_span="1"
+		/>
+	</TableRow>
+</TableLayout>
+
+<!--
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+<TextView
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:text="Hello World, Connect"
+    />
+</LinearLayout>
+-->
+

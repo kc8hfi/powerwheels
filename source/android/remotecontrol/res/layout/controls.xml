@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="wrap_content"
+	android:layout_height="fill_parent"
+	android:stretchColumns="*"
+>
+	<TableRow>
+		<TextView
+			android:id="@+id/status_msg"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/connected_label"
+			android:layout_gravity="center"
+			android:layout_span="3"
+		/>
+	</TableRow>
+	<TableRow>
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/vehicle_controls_label"
+			android:layout_gravity="center"
+			android:layout_span="3"
+		/>
+	</TableRow>
+	<TableRow>
+		<ImageButton
+			android:id="@+id/vehicle_up_button" 
+			android:src="@drawable/up"
+			android:background="@null"
+			android:layout_column="1"
+			
+		/>
+	</TableRow>
+    <TableRow>
+		<ImageButton
+			android:id="@+id/vehicle_left_button"
+			android:src="@drawable/left"
+			android:background="@null"
+			android:onClick="vehicle_left"
+		/>
+		<ImageButton
+			android:id="@+id/vehicle_right_button"
+			android:src="@drawable/right"
+			android:background="@null"
+			android:layout_column="2"
+			android:onClick="vehicle_right"
+		/>
+    </TableRow>
+	<TableRow>
+		<ImageButton
+			android:id="@+id/vehicle_reverse_button"
+			android:src="@drawable/down"
+			android:background="@null"
+			android:layout_column="1"
+			android:onClick="vehicle_backward"
+		/>
+	</TableRow>
+	<!-- an empty row	-->
+    <TableRow>
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="     "
+			android:layout_gravity="center"
+			android:layout_span="3"
+		/>
+	</TableRow>
+	<TableRow>
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="@string/turret_label"
+			android:layout_gravity="center"
+			android:layout_span="3"
+		/>
+	</TableRow>
+	<TableRow>
+		<ImageButton
+			android:id="@+id/turret_up_button"
+			android:src="@drawable/up_turret"
+			android:background="@null"
+			android:layout_column="1"
+			android:onClick="turret_up"
+		/>
+	</TableRow>
+	<TableRow>
+		<ImageButton
+			android:id="@+id/turret_left_button"
+			android:src="@drawable/left_turret"
+			android:background="@null"
+			android:onClick="turret_left"
+		/>
+		<ImageButton
+			android:id="@+id/turret_right_button"
+			android:src="@drawable/right_turret"
+			android:background="@null"
+			android:layout_column="2"
+			android:onClick="turret_right"
+		/>
+	</TableRow>
+	<TableRow>
+		<ImageButton
+			android:id="@+id/turret_down_button"
+			android:src="@drawable/down_turret"
+			android:background="@null"
+			android:layout_column="1"
+			android:onClick="turret_down"
+		/>
+	</TableRow>
+	<!-- an empty row	-->
+	<TableRow>
+		<TextView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:text="     "
+			android:layout_gravity="center"
+			android:layout_span="3"
+		/>
+	</TableRow>
+	<TableRow>
+		<Button
+			android:id="@+id/fire_button"
+			android:text="@string/fire_button_label"
+			android:layout_height="fill_parent" 
+			android:layout_width="fill_parent"
+			android:background="#0f0"
+			android:layout_span="3"
+			android:onClick="turret_fire"
+		/>
+<!-- add this line of code back to the fire button
+		android:layout_span="3" -->
+<!--		<Button-->
+<!--			android:id="@+id/button1"-->
+<!--			android:text="next screen"-->
+<!--			android:layout_height="fill_parent" -->
+<!--			android:layout_width="fill_parent"	-->
+<!--			-->
+<!--		></Button>        -->
+	</TableRow>
+	
+</TableLayout>
+
+<!--<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+
+<TextView
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:text="Hello World, MainActivity"
+    />
+
+
+</LinearLayout>-->
+
