@@ -5,10 +5,10 @@
 	<!--	title for the ip address boxes -->
 	<string name="ip_address">IP Address</string>
 	<!--	hints for all the number boxes	-->
-	<string name="ip_part1_hint">123</string>
-	<string name="ip_part2_hint">456</string>
-	<string name="ip_part3_hint">789</string>
-	<string name="ip_part4_hint">101</string>
+	<string name="ip_part1_hint">1</string>
+	<string name="ip_part2_hint">2</string>
+	<string name="ip_part3_hint">3</string>
+	<string name="ip_part4_hint">4</string>
 
 <!--	<string name="ip_p1_text">192</string>
 	<string name="ip_p2_text">168</string>
