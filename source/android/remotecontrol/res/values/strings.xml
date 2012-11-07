@@ -20,7 +20,7 @@
 	<!--	title for the port box	-->
 	<string name="port">Port</string>
 	<!--	hint for the port boxes-->
-	<string name="port_hint">4201</string>
+	<string name="port_hint">1</string>
 	<!--	title for the connect button	-->
 	<string name="connect_text">Connect</string>
 	<!--	title for the reset button	-->
