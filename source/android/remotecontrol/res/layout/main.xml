@@ -43,7 +43,7 @@
 			android:numeric="integer"
 			android:id="@+id/ip_part4"
 			android:hint="@string/ip_part4_hint"
-			android:text="86"
+			android:text="77"
 		/>
 	</TableRow>
 	<TableRow>
