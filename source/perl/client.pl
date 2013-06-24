@@ -1,7 +1,10 @@
 #!/usr/bin/perl
 
 use SDL;
+
+
 use SDL::Joystick;
+
 use SDL::Event;
 use SDL::Events;
 use SDLx::App;

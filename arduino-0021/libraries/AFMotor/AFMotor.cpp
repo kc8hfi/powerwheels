@@ -3,17 +3,29 @@
 // this code is public domain, enjoy!
 
 
-#include <avr/io.h>
-#include "WProgram.h"
+#if (ARDUINO >= 100)
+  #include "Arduino.h"
+#else
+  #if defined(__AVR__)
+    #include <avr/io.h>
+  #endif
+  #include "WProgram.h"
+#endif
+
 #include "AFMotor.h"
+
+
 
 static uint8_t latch_state;
 
-#define MICROSTEPS 16  // 8, 16 & 32 are popular
-
-//#define MOTORDEBUG 1
+#if (MICROSTEPS == 8)
+uint8_t microstepcurve[] = {0, 50, 98, 142, 180, 212, 236, 250, 255};
+#elif (MICROSTEPS == 16)
+uint8_t microstepcurve[] = {0, 25, 50, 74, 98, 120, 141, 162, 180, 197, 212, 225, 236, 244, 250, 253, 255};
+#endif
 
 AFMotorController::AFMotorController(void) {
+    TimerInitalized = false;
 }
 
 void AFMotorController::enable(void) {
@@ -67,7 +79,6 @@ void AFMotorController::latch_tx(void) {
 
 static AFMotorController MC;
 
-
 /******************************************
                MOTORS
 ******************************************/
@@ -81,13 +92,52 @@ inline void initPWM1(uint8_t freq) {
     TCCR2A |= _BV(COM2A1) | _BV(WGM20) | _BV(WGM21); // fast PWM, turn on oc2a
     TCCR2B = freq & 0x7;
     OCR2A = 0;
-#elif defined(__AVR_ATmega1280__) 
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
     // on arduino mega, pin 11 is now PB5 (OC1A)
     TCCR1A |= _BV(COM1A1) | _BV(WGM10); // fast PWM, turn on oc1a
     TCCR1B = (freq & 0x7) | _BV(WGM12);
     OCR1A = 0;
+#elif defined(__PIC32MX__)
+    #if defined(PIC32_USE_PIN9_FOR_M1_PWM)
+        // Make sure that pin 11 is an input, since we have tied together 9 and 11
+        pinMode(9, OUTPUT);
+        pinMode(11, INPUT);
+        if (!MC.TimerInitalized)
+        {   // Set up Timer2 for 80MHz counting fro 0 to 256
+            T2CON = 0x8000 | ((freq & 0x07) << 4); // ON=1, FRZ=0, SIDL=0, TGATE=0, TCKPS=<freq>, T32=0, TCS=0; // ON=1, FRZ=0, SIDL=0, TGATE=0, TCKPS=0, T32=0, TCS=0
+            TMR2 = 0x0000;
+            PR2 = 0x0100;
+            MC.TimerInitalized = true;
+        }
+         // Setup OC4 (pin 9) in PWM mode, with Timer2 as timebase
+        OC4CON = 0x8006;    // OC32 = 0, OCTSEL=0, OCM=6
+        OC4RS = 0x0000;
+        OC4R = 0x0000;
+    #elif defined(PIC32_USE_PIN10_FOR_M1_PWM)
+        // Make sure that pin 11 is an input, since we have tied together 9 and 11
+        pinMode(10, OUTPUT);
+        pinMode(11, INPUT);
+        if (!MC.TimerInitalized)
+        {   // Set up Timer2 for 80MHz counting fro 0 to 256
+            T2CON = 0x8000 | ((freq & 0x07) << 4); // ON=1, FRZ=0, SIDL=0, TGATE=0, TCKPS=<freq>, T32=0, TCS=0; // ON=1, FRZ=0, SIDL=0, TGATE=0, TCKPS=0, T32=0, TCS=0
+            TMR2 = 0x0000;
+            PR2 = 0x0100;
+            MC.TimerInitalized = true;
+        }
+         // Setup OC5 (pin 10) in PWM mode, with Timer2 as timebase
+        OC5CON = 0x8006;    // OC32 = 0, OCTSEL=0, OCM=6
+        OC5RS = 0x0000;
+        OC5R = 0x0000;
+    #else
+        // If we are not using PWM for pin 11, then just do digital
+        digitalWrite(11, LOW);
+    #endif
+#else
+   #error "This chip is not supported!"
 #endif
-    pinMode(11, OUTPUT);
+    #if !defined(PIC32_USE_PIN9_FOR_M1_PWM) && !defined(PIC32_USE_PIN10_FOR_M1_PWM)
+        pinMode(11, OUTPUT);
+    #endif
 }
 
 inline void setPWM1(uint8_t s) {
@@ -98,9 +148,29 @@ inline void setPWM1(uint8_t s) {
     defined(__AVR_ATmega328P__)
     // use PWM from timer2A on PB3 (Arduino pin #11)
     OCR2A = s;
-#elif defined(__AVR_ATmega1280__) 
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
     // on arduino mega, pin 11 is now PB5 (OC1A)
     OCR1A = s;
+#elif defined(__PIC32MX__)
+    #if defined(PIC32_USE_PIN9_FOR_M1_PWM)
+        // Set the OC4 (pin 9) PMW duty cycle from 0 to 255
+        OC4RS = s;
+    #elif defined(PIC32_USE_PIN10_FOR_M1_PWM)
+        // Set the OC5 (pin 10) PMW duty cycle from 0 to 255
+        OC5RS = s;
+    #else
+        // If we are not doing PWM output for M1, then just use on/off
+        if (s > 127)
+        {
+            digitalWrite(11, HIGH);
+        }
+        else
+        {
+            digitalWrite(11, LOW);
+        }
+    #endif
+#else
+   #error "This chip is not supported!"
 #endif
 }
 
@@ -114,12 +184,27 @@ inline void initPWM2(uint8_t freq) {
     TCCR2A |= _BV(COM2B1) | _BV(WGM20) | _BV(WGM21); // fast PWM, turn on oc2b
     TCCR2B = freq & 0x7;
     OCR2B = 0;
-#elif defined(__AVR_ATmega1280__) 
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
     // on arduino mega, pin 3 is now PE5 (OC3C)
     TCCR3A |= _BV(COM1C1) | _BV(WGM10); // fast PWM, turn on oc3c
     TCCR3B = (freq & 0x7) | _BV(WGM12);
     OCR3C = 0;
+#elif defined(__PIC32MX__)
+    if (!MC.TimerInitalized)
+    {   // Set up Timer2 for 80MHz counting fro 0 to 256
+        T2CON = 0x8000 | ((freq & 0x07) << 4); // ON=1, FRZ=0, SIDL=0, TGATE=0, TCKPS=<freq>, T32=0, TCS=0; // ON=1, FRZ=0, SIDL=0, TGATE=0, TCKPS=0, T32=0, TCS=0
+        TMR2 = 0x0000;
+        PR2 = 0x0100;
+        MC.TimerInitalized = true;
+    }
+    // Setup OC1 (pin3) in PWM mode, with Timer2 as timebase
+    OC1CON = 0x8006;    // OC32 = 0, OCTSEL=0, OCM=6
+    OC1RS = 0x0000;
+    OC1R = 0x0000;
+#else
+   #error "This chip is not supported!"
 #endif
+
     pinMode(3, OUTPUT);
 }
 
@@ -131,9 +216,14 @@ inline void setPWM2(uint8_t s) {
     defined(__AVR_ATmega328P__)
     // use PWM from timer2A on PB3 (Arduino pin #11)
     OCR2B = s;
-#elif defined(__AVR_ATmega1280__) 
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
     // on arduino mega, pin 11 is now PB5 (OC1A)
     OCR3C = s;
+#elif defined(__PIC32MX__)
+    // Set the OC1 (pin3) PMW duty cycle from 0 to 255
+    OC1RS = s;
+#else
+   #error "This chip is not supported!"
 #endif
 }
 
@@ -147,12 +237,26 @@ inline void initPWM3(uint8_t freq) {
     TCCR0A |= _BV(COM0A1) | _BV(WGM00) | _BV(WGM01); // fast PWM, turn on OC0A
     //TCCR0B = freq & 0x7;
     OCR0A = 0;
-#elif defined(__AVR_ATmega1280__) 
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
     // on arduino mega, pin 6 is now PH3 (OC4A)
     TCCR4A |= _BV(COM1A1) | _BV(WGM10); // fast PWM, turn on oc4a
     TCCR4B = (freq & 0x7) | _BV(WGM12);
     //TCCR4B = 1 | _BV(WGM12);
     OCR4A = 0;
+#elif defined(__PIC32MX__)
+    if (!MC.TimerInitalized)
+    {   // Set up Timer2 for 80MHz counting fro 0 to 256
+        T2CON = 0x8000 | ((freq & 0x07) << 4); // ON=1, FRZ=0, SIDL=0, TGATE=0, TCKPS=<freq>, T32=0, TCS=0; // ON=1, FRZ=0, SIDL=0, TGATE=0, TCKPS=0, T32=0, TCS=0
+        TMR2 = 0x0000;
+        PR2 = 0x0100;
+        MC.TimerInitalized = true;
+    }
+    // Setup OC3 (pin 6) in PWM mode, with Timer2 as timebase
+    OC3CON = 0x8006;    // OC32 = 0, OCTSEL=0, OCM=6
+    OC3RS = 0x0000;
+    OC3R = 0x0000;
+#else
+   #error "This chip is not supported!"
 #endif
     pinMode(6, OUTPUT);
 }
@@ -165,9 +269,14 @@ inline void setPWM3(uint8_t s) {
     defined(__AVR_ATmega328P__)
     // use PWM from timer0A on PB3 (Arduino pin #6)
     OCR0A = s;
-#elif defined(__AVR_ATmega1280__) 
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
     // on arduino mega, pin 6 is now PH3 (OC4A)
     OCR4A = s;
+#elif defined(__PIC32MX__)
+    // Set the OC3 (pin 6) PMW duty cycle from 0 to 255
+    OC3RS = s;
+#else
+   #error "This chip is not supported!"
 #endif
 }
 
@@ -183,12 +292,26 @@ inline void initPWM4(uint8_t freq) {
     TCCR0A |= _BV(COM0B1) | _BV(WGM00) | _BV(WGM01); // fast PWM, turn on oc0a
     //TCCR0B = freq & 0x7;
     OCR0B = 0;
-#elif defined(__AVR_ATmega1280__) 
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
     // on arduino mega, pin 5 is now PE3 (OC3A)
     TCCR3A |= _BV(COM1A1) | _BV(WGM10); // fast PWM, turn on oc3a
     TCCR3B = (freq & 0x7) | _BV(WGM12);
     //TCCR4B = 1 | _BV(WGM12);
     OCR3A = 0;
+#elif defined(__PIC32MX__)
+    if (!MC.TimerInitalized)
+    {   // Set up Timer2 for 80MHz counting fro 0 to 256
+        T2CON = 0x8000 | ((freq & 0x07) << 4); // ON=1, FRZ=0, SIDL=0, TGATE=0, TCKPS=<freq>, T32=0, TCS=0; // ON=1, FRZ=0, SIDL=0, TGATE=0, TCKPS=0, T32=0, TCS=0
+        TMR2 = 0x0000;
+        PR2 = 0x0100;
+        MC.TimerInitalized = true;
+    }
+    // Setup OC2 (pin 5) in PWM mode, with Timer2 as timebase
+    OC2CON = 0x8006;    // OC32 = 0, OCTSEL=0, OCM=6
+    OC2RS = 0x0000;
+    OC2R = 0x0000;
+#else
+   #error "This chip is not supported!"
 #endif
     pinMode(5, OUTPUT);
 }
@@ -201,9 +324,14 @@ inline void setPWM4(uint8_t s) {
     defined(__AVR_ATmega328P__)
     // use PWM from timer0A on PB3 (Arduino pin #6)
     OCR0B = s;
-#elif defined(__AVR_ATmega1280__) 
+#elif defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
     // on arduino mega, pin 6 is now PH3 (OC4A)
     OCR3A = s;
+#elif defined(__PIC32MX__)
+    // Set the OC2 (pin 5) PMW duty cycle from 0 to 255
+    OC2RS = s;
+#else
+   #error "This chip is not supported!"
 #endif
 }
 
@@ -264,7 +392,7 @@ void AF_DCMotor::run(uint8_t cmd) {
     MC.latch_tx();
     break;
   case RELEASE:
-    latch_state &= ~_BV(a);
+    latch_state &= ~_BV(a);     // A and B both low
     latch_state &= ~_BV(b); 
     MC.latch_tx();
     break;
@@ -293,6 +421,7 @@ AF_Stepper::AF_Stepper(uint16_t steps, uint8_t num) {
 
   revsteps = steps;
   steppernum = num;
+  currentstep = 0;
 
   if (steppernum == 1) {
     latch_state &= ~_BV(MOTOR1_A) & ~_BV(MOTOR1_B) &
@@ -305,13 +434,11 @@ AF_Stepper::AF_Stepper(uint16_t steps, uint8_t num) {
     digitalWrite(11, HIGH);
     digitalWrite(3, HIGH);
 
-#ifdef MICROSTEPPING
     // use PWM for microstepping support
-    initPWM1(MOTOR12_64KHZ);
-    initPWM2(MOTOR12_64KHZ);
+    initPWM1(STEPPER1_PWM_RATE);
+    initPWM2(STEPPER1_PWM_RATE);
     setPWM1(255);
     setPWM2(255);
-#endif
 
   } else if (steppernum == 2) {
     latch_state &= ~_BV(MOTOR3_A) & ~_BV(MOTOR3_B) &
@@ -324,19 +451,17 @@ AF_Stepper::AF_Stepper(uint16_t steps, uint8_t num) {
     digitalWrite(5, HIGH);
     digitalWrite(6, HIGH);
 
-#ifdef MICROSTEPPING    
     // use PWM for microstepping support
     // use PWM for microstepping support
-    initPWM3(1);
-    initPWM4(1);
+    initPWM3(STEPPER2_PWM_RATE);
+    initPWM4(STEPPER2_PWM_RATE);
     setPWM3(255);
     setPWM4(255);
-#endif
   }
 }
 
 void AF_Stepper::setSpeed(uint16_t rpm) {
-  usperstep = 60000000 / (revsteps * rpm);
+  usperstep = 60000000 / ((uint32_t)revsteps * (uint32_t)rpm);
   steppingcounter = 0;
 }
 
@@ -359,7 +484,6 @@ void AF_Stepper::step(uint16_t steps, uint8_t dir,  uint8_t style) {
   if (style == INTERLEAVE) {
     uspers /= 2;
   }
-#ifdef MICROSTEPPING
  else if (style == MICROSTEP) {
     uspers /= MICROSTEPS;
     steps *= MICROSTEPS;
@@ -367,7 +491,6 @@ void AF_Stepper::step(uint16_t steps, uint8_t dir,  uint8_t style) {
     Serial.print("steps = "); Serial.println(steps, DEC);
 #endif
   }
-#endif
 
   while (steps--) {
     ret = onestep(dir, style);
@@ -378,9 +501,7 @@ void AF_Stepper::step(uint16_t steps, uint8_t dir,  uint8_t style) {
       steppingcounter -= 1000;
     }
   }
-#ifdef MICROSTEPPING
   if (style == MICROSTEP) {
-    //Serial.print("last ret = "); Serial.println(ret, DEC);
     while ((ret != 0) && (ret != MICROSTEPS)) {
       ret = onestep(dir, style);
       delay(uspers/1000); // in ms
@@ -391,307 +512,156 @@ void AF_Stepper::step(uint16_t steps, uint8_t dir,  uint8_t style) {
       } 
     }
   }
-#endif
-
 }
 
 uint8_t AF_Stepper::onestep(uint8_t dir, uint8_t style) {
   uint8_t a, b, c, d;
-  uint8_t step;
-  uint8_t mstep = 0;
-#ifdef MICROSTEPPING
   uint8_t ocrb, ocra;
-#endif
+
+  ocra = ocrb = 255;
+
   if (steppernum == 1) {
     a = _BV(MOTOR1_A);
     b = _BV(MOTOR2_A);
     c = _BV(MOTOR1_B);
     d = _BV(MOTOR2_B);
-
-#ifdef MICROSTEPPING
-#if defined(__AVR_ATmega8__) || \
-    defined(__AVR_ATmega48__) || \
-    defined(__AVR_ATmega88__) || \
-    defined(__AVR_ATmega168__) || \
-    defined(__AVR_ATmega328P__)
-    ocra = OCR2A;
-    ocrb = OCR2B;
-#elif defined(__AVR_ATmega1280__) 
-    ocra = OCR1A;
-    ocrb = OCR3C;
-#endif
-
-    if (style == MICROSTEP) {
-      //TCCR2B = _BV(CS21);
-    }
-#endif
   } else if (steppernum == 2) {
     a = _BV(MOTOR3_A);
     b = _BV(MOTOR4_A);
     c = _BV(MOTOR3_B);
     d = _BV(MOTOR4_B);
-
-#ifdef MICROSTEPPING
-#if defined(__AVR_ATmega8__) || \
-    defined(__AVR_ATmega48__) || \
-    defined(__AVR_ATmega88__) || \
-    defined(__AVR_ATmega168__) || \
-    defined(__AVR_ATmega328P__)
-    ocra = OCR0A;
-    ocrb = OCR0B;
-#elif defined(__AVR_ATmega1280__) 
-    ocra = OCR4A;
-    ocrb = OCR3A;
-#endif
-
-    if (style == MICROSTEP) {
-      //TCCR0B = _BV(CS00);
-    }   
-#endif
-
   } else {
     return 0;
   }
 
-#ifdef MOTORDEBUG
-  Serial.print("a = "); Serial.print(ocra, DEC);
-  Serial.print(" b = "); Serial.print(ocrb, DEC);
-  Serial.print("\t");
-#endif
-
-  // OK next determine what step we are at 
-  if ((latch_state & (a | b)) == (a | b))
-    step = 1 * MICROSTEPS; 
-  else if ((latch_state & (b | c)) == (b | c))
-    step = 3 * MICROSTEPS; 
-  else if ((latch_state & (c | d)) == (c | d))
-    step = 5 * MICROSTEPS;
-  else if ((latch_state & (d | a)) == (d | a))
-    step = 7 * MICROSTEPS;
-  else if (latch_state & a)
-    step = 0;
-  else if (latch_state & b)
-    step = 2 * MICROSTEPS;
-  else if (latch_state & c)
-    step = 4 * MICROSTEPS;
-  else
-    step = 6 * MICROSTEPS;
-
-  //Serial.print("step "); Serial.print(step, DEC); Serial.print("\t");
   // next determine what sort of stepping procedure we're up to
   if (style == SINGLE) {
-    if ((step/MICROSTEPS) % 2) { // we're at an odd step, weird
-      if (dir == FORWARD)
-	step = (step + MICROSTEPS) % (8*MICROSTEPS);
-      else
-	step = (step + 7*MICROSTEPS) % (8*MICROSTEPS);
+    if ((currentstep/(MICROSTEPS/2)) % 2) { // we're at an odd step, weird
+      if (dir == FORWARD) {
+	currentstep += MICROSTEPS/2;
+      }
+      else {
+	currentstep -= MICROSTEPS/2;
+      }
     } else {           // go to the next even step
-      if (dir == FORWARD)
-	step = (step + 2*MICROSTEPS) % (8*MICROSTEPS);
-      else
-	step = (step + 6*MICROSTEPS) % (8*MICROSTEPS);  
-
+      if (dir == FORWARD) {
+	currentstep += MICROSTEPS;
+      }
+      else {
+	currentstep -= MICROSTEPS;
+      }
     }
-#ifdef MICROSTEPPING
-    ocra = 255;
-    ocrb = 255;
-#endif
-
   } else if (style == DOUBLE) {
-    if (! (step/MICROSTEPS % 2)) { // we're at an even step, weird
-      if (dir == FORWARD)
-	step = (step + MICROSTEPS) % (8*MICROSTEPS);
-      else
-	step = (step + 7*MICROSTEPS) % (8*MICROSTEPS);
+    if (! (currentstep/(MICROSTEPS/2) % 2)) { // we're at an even step, weird
+      if (dir == FORWARD) {
+	currentstep += MICROSTEPS/2;
+      } else {
+	currentstep -= MICROSTEPS/2;
+      }
     } else {           // go to the next odd step
-      if (dir == FORWARD)
-	step = (step + 2*MICROSTEPS) % (8*MICROSTEPS);
-      else
-	step = (step + 6*MICROSTEPS) % (8*MICROSTEPS);
+      if (dir == FORWARD) {
+	currentstep += MICROSTEPS;
+      } else {
+	currentstep -= MICROSTEPS;
+      }
     }
-#ifdef MICROSTEPPING
-    ocra = 255;
-    ocrb = 255;
-#endif
   } else if (style == INTERLEAVE) {
-     if (dir == FORWARD)
-       step = (step + 1*MICROSTEPS) % (8*MICROSTEPS);
-     else
-       step = (step + 7*MICROSTEPS) % (8*MICROSTEPS);
-#ifdef MICROSTEPPING
-    ocra = 255;
-    ocrb = 255;
-#endif
-  } 
-#ifdef MICROSTEPPING
-  else if (style == MICROSTEP) {
-
-    //Serial.print("Step #"); Serial.print(step/MICROSTEPS, DEC); Serial.print("\t");
     if (dir == FORWARD) {
-
-      // if at even step, make sure its 'odd'
-      if (! (step/MICROSTEPS) % 2) {
-	step = (step + MICROSTEPS) % (8*MICROSTEPS);
-      }
-
-      // fix hiccups from changing direction
-      if (((ocra == 255) && ((step/MICROSTEPS)%4 == 3)) ||
-	  ((ocrb == 255) && ((step/MICROSTEPS)%4 == 1))) {
-	step += 2*MICROSTEPS;
-	step %= 8*MICROSTEPS;
-      }
-
-      if ((step == MICROSTEPS) || (step == 5*MICROSTEPS)) {
-	// get the current microstep
-	if (ocrb == 255)
-	  mstep = MICROSTEPS;
-	else
-	  mstep = ocrb / (256UL / MICROSTEPS);
-#ifdef MOTORDEBUG
-	Serial.print("uStep = "); Serial.print(mstep, DEC);
-#endif
-	// ok now go to next step
-	mstep++;
-	mstep %= (MICROSTEPS+1);
-	if (mstep == MICROSTEPS)
-	  ocrb = 255;
-	else 
-	  ocrb = mstep * (256UL / MICROSTEPS);
-	ocra = 255 - ocrb;
-#ifdef MOTORDEBUG
-	Serial.print(" -> "); Serial.println(mstep, DEC);
-#endif
-	if (mstep == MICROSTEPS)
-	  step = (step + 2*MICROSTEPS) % (8*MICROSTEPS);
-      } else {
-	// get the current microstep
-	if (ocrb == 255)
-	  mstep = MICROSTEPS;
-	else
-	  mstep = ocrb / (256UL / MICROSTEPS);
-#ifdef MOTORDEBUG
-	Serial.print("uStep = "); Serial.print(mstep, DEC);
-#endif
-	// ok now go to next step
-	mstep += MICROSTEPS;
-	mstep %= (MICROSTEPS+1);
-	if (mstep == MICROSTEPS)
-	  ocrb = 255;
-	else 
-	  ocrb = mstep * (256UL / MICROSTEPS);
-	ocra = 255 - ocrb;
-#ifdef MOTORDEBUG
-	Serial.print(" +> "); Serial.println(mstep, DEC);
-#endif
-	if (mstep == 0)
-	  step = (step + 2*MICROSTEPS) % (8*MICROSTEPS);
-      }
+       currentstep += MICROSTEPS/2;
     } else {
+       currentstep -= MICROSTEPS/2;
+    }
+  } 
 
-      // fix hiccups from changing direction
-      if (((ocra == 255) && ((step/MICROSTEPS)%4 == 1)) ||
-	  ((ocrb == 255) && ((step/MICROSTEPS)%4 == 3))) {
-	step = (step + 6*MICROSTEPS);
-	step %= (8*MICROSTEPS);
-      }
+  if (style == MICROSTEP) {
+    if (dir == FORWARD) {
+      currentstep++;
+    } else {
+      // BACKWARDS
+      currentstep--;
+    }
 
-      // if at even step, make sure its 'odd'
-      if (! (step/MICROSTEPS % 2)) {
-	step = (step + 7*MICROSTEPS) % (8*MICROSTEPS);
-      }
-      if ((step == MICROSTEPS) || (step == 5*MICROSTEPS)) {
-	// get the current microstep
-	if (ocrb == 255)
-	  mstep = MICROSTEPS;
-	else
-	  mstep = ocrb / (256UL / MICROSTEPS);
-#ifdef MOTORDEBUG
-	Serial.print(" uStep = "); Serial.print(mstep, DEC);
-#endif
-	// ok now go to next step
-	mstep += MICROSTEPS;
-	mstep %= (MICROSTEPS+1);
-	if (mstep == MICROSTEPS)
-	  ocrb = 255;
-	else
-	  ocrb = mstep * (256UL / MICROSTEPS);
-	ocra = 255 - ocrb;
-#ifdef MOTORDEBUG
-	Serial.print(" !> "); Serial.println(mstep, DEC);
-#endif
-	if (mstep == 0)
-	  step = (step + 6*MICROSTEPS) % (8*MICROSTEPS);
-      } else {
-	// get the current microstep
-	if (ocrb == 255)
-	  mstep = MICROSTEPS;
-	else
-	  mstep = ocrb / (256UL / MICROSTEPS);
-#ifdef MOTORDEBUG
-	Serial.print("uStep = "); Serial.print(mstep, DEC);
-#endif
-	// ok now go to next step
-	mstep++;
-	mstep %= (MICROSTEPS + 1);
-	if (mstep == MICROSTEPS)
-	  ocrb = 255;
-	else 
-	  ocrb = mstep * (256UL / MICROSTEPS);
-	ocra = 255 - ocrb;
-#ifdef MOTORDEBUG
-	Serial.print(" *> "); Serial.println(mstep, DEC);
-#endif
-	if (mstep == MICROSTEPS)
-	  step = (step + 6*MICROSTEPS) % (8*MICROSTEPS);
-      }
+    currentstep += MICROSTEPS*4;
+    currentstep %= MICROSTEPS*4;
+
+    ocra = ocrb = 0;
+    if ( (currentstep >= 0) && (currentstep < MICROSTEPS)) {
+      ocra = microstepcurve[MICROSTEPS - currentstep];
+      ocrb = microstepcurve[currentstep];
+    } else if  ( (currentstep >= MICROSTEPS) && (currentstep < MICROSTEPS*2)) {
+      ocra = microstepcurve[currentstep - MICROSTEPS];
+      ocrb = microstepcurve[MICROSTEPS*2 - currentstep];
+    } else if  ( (currentstep >= MICROSTEPS*2) && (currentstep < MICROSTEPS*3)) {
+      ocra = microstepcurve[MICROSTEPS*3 - currentstep];
+      ocrb = microstepcurve[currentstep - MICROSTEPS*2];
+    } else if  ( (currentstep >= MICROSTEPS*3) && (currentstep < MICROSTEPS*4)) {
+      ocra = microstepcurve[currentstep - MICROSTEPS*3];
+      ocrb = microstepcurve[MICROSTEPS*4 - currentstep];
     }
   }
 
+  currentstep += MICROSTEPS*4;
+  currentstep %= MICROSTEPS*4;
 
-  //Serial.print(" -> step = "); Serial.print(step/MICROSTEPS, DEC); Serial.print("\t");
+#ifdef MOTORDEBUG
+  Serial.print("current step: "); Serial.println(currentstep, DEC);
+  Serial.print(" pwmA = "); Serial.print(ocra, DEC); 
+  Serial.print(" pwmB = "); Serial.println(ocrb, DEC); 
+#endif
 
   if (steppernum == 1) {
     setPWM1(ocra);
-     setPWM2(ocrb);
+    setPWM2(ocrb);
   } else if (steppernum == 2) {
     setPWM3(ocra);
     setPWM4(ocrb);
   }
 
-#endif  // microstepping
 
   // release all
   latch_state &= ~a & ~b & ~c & ~d; // all motor pins to 0
 
   //Serial.println(step, DEC);
-
-  switch (step/MICROSTEPS) {
-  case 0:
-    latch_state |= a; // energize coil 1 only
-    break;
-  case 1:
-    latch_state |= a | b; // energize coil 1+2
-    break;
-  case 2:
-    latch_state |= b; // energize coil 2 only
-    break;
-  case 3:
-    latch_state |= b | c; // energize coil 2+3
-    break;
-  case 4:
-    latch_state |= c; // energize coil 3 only
-    break; 
-  case 5:
-    latch_state |= c | d; // energize coil 3+4
-    break;
-  case 6:
-    latch_state |= d; // energize coil 4 only
-    break;
-  case 7:
-    latch_state |= d | a; // energize coil 1+4
-    break;
+  if (style == MICROSTEP) {
+    if ((currentstep >= 0) && (currentstep < MICROSTEPS))
+      latch_state |= a | b;
+    if ((currentstep >= MICROSTEPS) && (currentstep < MICROSTEPS*2))
+      latch_state |= b | c;
+    if ((currentstep >= MICROSTEPS*2) && (currentstep < MICROSTEPS*3))
+      latch_state |= c | d;
+    if ((currentstep >= MICROSTEPS*3) && (currentstep < MICROSTEPS*4))
+      latch_state |= d | a;
+  } else {
+    switch (currentstep/(MICROSTEPS/2)) {
+    case 0:
+      latch_state |= a; // energize coil 1 only
+      break;
+    case 1:
+      latch_state |= a | b; // energize coil 1+2
+      break;
+    case 2:
+      latch_state |= b; // energize coil 2 only
+      break;
+    case 3:
+      latch_state |= b | c; // energize coil 2+3
+      break;
+    case 4:
+      latch_state |= c; // energize coil 3 only
+      break; 
+    case 5:
+      latch_state |= c | d; // energize coil 3+4
+      break;
+    case 6:
+      latch_state |= d; // energize coil 4 only
+      break;
+    case 7:
+      latch_state |= d | a; // energize coil 1+4
+      break;
+    }
   }
+
+ 
   MC.latch_tx();
-  return mstep;
+  return currentstep;
 }
 
