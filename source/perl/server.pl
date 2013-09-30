@@ -1,199 +1,153 @@
 #!/usr/bin/perl
 
-use IO::Socket;
+use strict;
+use warnings;
+
 use Device::SerialPort;
 use Net::Address::IP::Local;
+use IO::Async::Listener;
+use IO::Async::Loop;
+use IO::Async::Timer::Periodic;
 
 #make stdout unbuffered
 $| = 1; 
 
-$ip = "127.0.0.1";
+my $host = "127.0.0.1";
+my $port = "4201";
 eval 
 {
-	$ip = Net::Address::IP::Local->public;
+     $host = Net::Address::IP::Local->public;
 };
-#warn "no ip address, $@ \n";
-warn "no ip address, using $ip instead\n";
+my $serialport= "";
 
-$host = $ip;
-$port = '4201';
+sub log_time
+{
+     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst)=localtime(time);
+     my $nice_timestamp = sprintf ( "%04d-%02d-%02d %02d:%02d:%02d",
+                                   $year+1900,$mon+1,$mday,$hour,$min,$sec);
+     return $nice_timestamp;
+}
 
-my $socket = new IO::Socket::INET (
-	LocalHost 	=>	$host,
-	LocalPort		=>	$port,
-	Proto		=>	'tcp',
-	Listen		=>	1,
-	ReuseAddr	=>	1, 
+my $logfile = "server.log";
+
+sub write_log
+{
+     my ($want_timestamp,$string) = @_;
+     open LOGFILE, ">>$logfile" or die "cannot create log file! $! \n";
+     if ($want_timestamp == 1)
+     {
+          print log_time(),"\t",$string,"\n";
+          print LOGFILE log_time(),"\t",$string,"\n";
+     }
+     else
+     {
+          print $string,"\n";
+          print LOGFILE $string,"\n";
+     }
+     close LOGFILE;
+}
+
+my $loop = IO::Async::Loop->new;
+my $timer = IO::Async::Timer::Periodic->new(
+    interval => 3,
+
+    on_tick => sub {
+       #print "You've had 3 seconds\n";
+       $serialport->write("ping\n");
+    },
+ );
+$timer->start;
+$loop->add( $timer );
+
+my $listener = IO::Async::Listener->new
+(
+     on_stream => sub
+     {
+          my $self = shift;
+          my ( $stream ) = @_;
+          
+          my $socket = $stream->read_handle;
+          my $peeraddr = $socket->peerhost . ":" . $socket->peerport;
+          
+          write_log(1,"connection from $peeraddr");
+          $stream->configure
+          (
+               on_read => sub
+               {
+                    my ($self,$buffref,$eof) = @_;
+                    # s/^(.*\n)// 
+                    # this means any number of characters and any number of \n's 
+                    # at the beginning of the string
+                    #basically, gets the first line of stuff
+                    while( $$buffref =~ s/^(.*\n)// )
+                    {
+                         #eat a line from the stream input
+                         $self->write($1);   #$1 is the captured part of that regex in the loop
+                         my $cmd = $1;
+                         $cmd =~ s/[\r\n]+//;
+                         write_log(1,"cmd: $cmd");
+                         $serialport->write($cmd."\n");
+                    }
+                    return 0;
+               },
+               on_closed => sub
+               {
+                    write_log(1,"connection from $peeraddr closed");
+               },
+          );
+          $loop->add($stream);
+     },
 );
-if ($socket)
-{
-	print "socket isn't created\n";
-}
-die "could not create socket: $!\n" unless $socket;
 
-# Set up the serial port
-# 19200, 81N on the USB ftdi driver
+$loop->add($listener);
 
-#typed in the list of possible devices.  I just started typing 
-#them in as my linux box picked them up. 
+$listener->listen
+(
+     addr => 
+     { 
+          ip        =>   $host,
+          port      =>   $port,
+          family    =>   "inet",
+          socktype  =>   "stream",
+     },
+     on_listen =>   sub
+     {    
+          write_log(0,"Server Ready");
+          write_log(0,"ip:\t$host");
+          write_log(0,"port:\t$port");
+          
+          #list of all the ports that I've seen the arduino controllers show up on
+          my @whichdevice = qw(/dev/ttyUSB0 /dev/ttyUSB1 /dev/ttyACM0 /dev/ttyACM1);
+          foreach my $s(@whichdevice)
+          {
+               #print "device is: ", $s,"\n";
+               #print "checking $s:\t";
+               $serialport = Device::SerialPort->new($s);
+               #print "$! is the error\n";
+               if ($serialport)
+               {
+                    write_log_no_timestamp("serial port:\t$s");
+                    $serialport->databits(8);
+                    $serialport->baudrate(115200);
+                    $serialport->parity("none");
+                    $serialport->stopbits(1);
+                    last;
+               }
+          }
+          if (!$serialport)
+          {
+               #if theres no arduino plugged in, don't go any farther
+               die "cannot connect to the serial port!\n";
+          }
+          
+          
+     },
+     on_resolve_error => sub { die "Cannot resolve - $_[0]\n"; },
+     on_listen_error  => sub { die "Cannot listen\n"; }, 
+);
 
-#The ones with usb are for the controllers that use the ftdi usb chips
-#The acm ones are for the controllers that use the atmega16u2 or the atmega8u2
-#programmed as a usb to serial converter
 
-@whichdevice = qw(/dev/ttyUSB0 /dev/ttyUSB1 /dev/ttyUSB2 /dev/ttyACM0 /dev/ttyACM1);
-$serialport= "";
-foreach $s(@whichdevice)
-{
-	print "device is: ", $s,"\n";
-	$serialport = Device::SerialPort->new($s);
-	print "$! is the error\n";
-	if ($serialport)
-	{
-		print "we got a serial port! $s\n";
-		$serialport->databits(8);
-		$serialport->baudrate(9600);
-		$serialport->parity("none");
-		$serialport->stopbits(1);
-		last;
-	}
-	else
-	{
-		print "whats the deal\n";
-	}
-}
-if (!$serialport)
-{
-	die "cannot connect to the serial port!\n";
-}
 
-$v_fb = 1;
-$v_lr = 3;
-$t_ud = 9;
-$t_lr = 10;
-$fire = 2;
+$loop->run;
 
-print "ip address:\t",$host,"\n";
-print "port number:\t",$port,"\n";
-
-print "\nwaiting for a connection....\n";
-
-#this function sends data out the serial port
-#it turns each character in the string into a char and
-#send them out the serial port
-sub sendcommand
-{
-	#print "ord: ",ord(255),"\n";
-	#print "chr: ",chr(255),"\n";
-	#print 255;
-	$serialport->write(chr(255));
-	foreach (@_)
-	{
-		$serialport->write(chr($_));
-		#print "\nserial $_,:\n";
-		print "$_,";
-	}
-	#print "\n";
-}
-
-#my $newsocket = $socket->accept();
-#$input = "";
-#while (<$newsocket>)
-
-#BVF - begin vehicle forward
-#EVF - end vehicle forward
-#BVB - begin vehicle backward
-#EVB - end vehicle backward
-#BVL - begin vehicle left
-#BVR - begin vehicle right
-#EVL - end vehicle left
-#EVR - end vehicle right
-#BTL - begin turret left
-#ETL - end turret left
-#BTR - begin turret right
-#ETR - end turret right
-#BTU - begin turret up
-#ETU - end turret up
-#BTD - begin turret down
-#ETD - end turret down
-#SF - start firing
-#EF - end firing
-
-while($newsocket = $socket->accept())
-{
-	print "connection from ",$newsocket->peerhost(),"\n";
-	
-	#wait for a command to come in, then decide what command to 
-	#send to the serial port based on the incoming string
-	while (<$newsocket>)
-	{
-		$_ =~ s/[\r\n]+//;
-		print "received:$_";
-		if ($_ eq "BVF")
-		{
-			#print "$v_fb:1";
-			#this works
-			sendcommand($v_fb,1);
-			
-			#sendcommand("B","V");
-			#sendcommand("BVF");
-		}
-		if (($_ eq "EVF") || ($_ eq "EVB")) 
-		{
-			#print "$v_fb:0";
-			sendcommand($v_fb,0);
-		}
-		if ($_ eq "BVB")
-		{
-			sendcommand($v_fb,2);
-		}
-		if ($_ eq "BVL")
-		{
-			sendcommand($v_lr,1);
-		}
-		if ($_ eq "BVR")
-		{
-			sendcommand($v_lr,2);
-		}
-		if (($_ eq "EVL") || ($_ eq "EVR"))
-		{
-			sendcommand($v_lr,0);
-		}
-		if (($_ eq "ETL") || ($_ eq "ETR"))
-		{
-			sendcommand($t_lr, 0);
-		}
-		if ($_ eq "BTL")
-		{
-			sendcommand($t_lr,1);
-		}
-		if ($_ eq "BTR")
-		{
-			sendcommand($t_lr,2);
-		}
-		if ($_ eq "BTU")
-		{
-			sendcommand($t_ud,1);
-		}
-		if ($_ eq "BTD")
-		{
-			sendcommand($t_ud,2);
-		}
-		if (($_ eq "ETU")||($_ eq "ETD"))
-		{
-			sendcommand($t_ud,0);
-		}
-		if ($_ eq "SF")
-		{
-			sendcommand($fire,1);
-		}
-		if ($_ eq "EF")
-		{
-			sendcommand($fire,0);
-		}
-
-		print "\n";
-	}
-} 
-#close ($socket);
-
+exit;

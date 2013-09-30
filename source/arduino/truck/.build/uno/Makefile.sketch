@@ -1,0 +1,14 @@
+
+
+
+
+
+.build/uno/src/truck.cpp : src/truck.ino
+	@mkdir -p .build/uno/src
+	@echo [93msrc/truck.ino[0m
+	@/usr/bin/ino preproc  -o $@ $^
+
+
+all : .build/uno/src/truck.cpp
+	@true
+
