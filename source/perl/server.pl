@@ -126,7 +126,7 @@ $listener->listen
                #print "$! is the error\n";
                if ($serialport)
                {
-                    write_log_no_timestamp("serial port:\t$s");
+                    write_log(0,"serial port:\t$s");
                     $serialport->databits(8);
                     $serialport->baudrate(115200);
                     $serialport->parity("none");
