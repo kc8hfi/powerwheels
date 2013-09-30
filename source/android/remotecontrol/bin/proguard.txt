@@ -1,0 +1,33 @@
+# view AndroidManifest.xml #generated:8
+-keep class com.example.remotecontrol.Connect { <init>(...); }
+
+# view AndroidManifest.xml #generated:15
+-keep class com.example.remotecontrol.Controls { <init>(...); }
+
+# onClick res/layout/main.xml #generated:68
+-keepclassmembers class * { *** connect(...); }
+
+# onClick res/layout/controls.xml #generated:104
+-keepclassmembers class * { *** turret_down(...); }
+
+# onClick res/layout/controls.xml #generated:123
+-keepclassmembers class * { *** turret_fire(...); }
+
+# onClick res/layout/controls.xml #generated:89
+-keepclassmembers class * { *** turret_left(...); }
+
+# onClick res/layout/controls.xml #generated:95
+-keepclassmembers class * { *** turret_right(...); }
+
+# onClick res/layout/controls.xml #generated:80
+-keepclassmembers class * { *** turret_up(...); }
+
+# onClick res/layout/controls.xml #generated:52
+-keepclassmembers class * { *** vehicle_backward(...); }
+
+# onClick res/layout/controls.xml #generated:37
+-keepclassmembers class * { *** vehicle_left(...); }
+
+# onClick res/layout/controls.xml #generated:43
+-keepclassmembers class * { *** vehicle_right(...); }
+
