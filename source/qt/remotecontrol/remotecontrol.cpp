@@ -24,6 +24,7 @@ along with Remote Control.  If not, see <http://www.gnu.org/licenses/>.
 #include <QString>
 #include <QKeyEvent>
 #include <QShortcut>
+#include "about.h"
 #include "connectioninfo.h"
 #include "remotecontrol.h"
 #include "Joystick.h"
@@ -92,6 +93,15 @@ RemoteControl::RemoteControl(QMainWindow *parent)
 }//end constructor
 
 /*!
+ * shows that about dialog box
+ */
+void RemoteControl::about()
+{
+     About about;
+     about.exec();
+}
+
+/*!
 *Opens a dialog box,  gets the ip address and port of the server.  
 *Makes a connection to the server, display an error message if the 
 *connection could not be made
@@ -122,6 +132,18 @@ void RemoteControl::serverConnect()
           }
      }
 }//end serverConnect
+
+/*!
+ * disconnect from the server
+ */
+void RemoteControl::serverDisconnect()
+{
+     if(socket->state() == QAbstractSocket::ConnectedState)
+     {
+          socket->disconnectFromHost();
+          remoteControl.statusBar->showMessage("Not connected");
+     }
+}
 
 /*!
 *displays the error message if a connection could not be made

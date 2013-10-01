@@ -1,0 +1,4 @@
+To compile this program, you will need the following:
+
+1.  qt-devel
+2.  SDL-devel

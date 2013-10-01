@@ -7,10 +7,22 @@ TARGET = remotecontrol
 DEPENDPATH += .
 INCLUDEPATH += . /usr/include/SDL
 
+VERSION = 0.2
+DEFINES += APP_VERSION=\\\"$$VERSION\\\"
+
 # Input
-HEADERS += connectioninfo.h joystick.h remotecontrol.h
-FORMS += connectioninfobase.ui remotecontrolbase.ui
-SOURCES += connectioninfo.cpp main.cpp joystick.cpp remotecontrol.cpp
+HEADERS += about.h \
+          connectioninfo.h \
+          joystick.h \
+          remotecontrol.h
+FORMS +=  about.ui \
+          connectioninfobase.ui \
+          remotecontrolbase.ui
+SOURCES += about.cpp \
+          connectioninfo.cpp \
+          main.cpp \
+          joystick.cpp \
+          remotecontrol.cpp
 
 RESOURCES = resources/icons.qrc
 
