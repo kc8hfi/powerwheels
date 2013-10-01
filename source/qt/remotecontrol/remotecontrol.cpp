@@ -1,5 +1,5 @@
 /*
- * Copyright 2010
+ * Copyright 2010-2013
  * Richie Adams, Charles Amey, Donald Kinder, Chance Sheets
  * 
 This file is part of Remote Control.
@@ -58,38 +58,38 @@ const QString STOP_FIRE		= "EF";
 RemoteControl::RemoteControl(QMainWindow *parent)
 	: QMainWindow(parent)
 {
-	remoteControl.setupUi(this);
+     remoteControl.setupUi(this);
 
-	startfwd = 0;
-	startbwk = 0;
-	startleft = 0;
-	startright = 0;
-	
-	ipaddress = "";
-	port = "";
-	
-	//make a socket
-	socket = new QTcpSocket(this);
-	//connect(socket, SIGNAL(readyRead()), this, SLOT(readFortune()));
-	connect(socket, SIGNAL(error(QAbstractSocket::SocketError)),
-		   this, SLOT(displayError(QAbstractSocket::SocketError)));
-	
-	connect(socket, SIGNAL(connected()),this,SLOT(connectionSuccess()));
-	
-	joystick = new Joystick();
-	
-	connect (joystick,SIGNAL(buttonPress(int)), this, SLOT(buttonPress(int)));
-	connect (joystick,SIGNAL(buttonRelease(int)), this, SLOT(buttonRelease(int)));
-	connect (joystick,SIGNAL(axisEvent(int,int)), this, SLOT(axisEvent(int,int)));
+     startfwd = 0;
+     startbwk = 0;
+     startleft = 0;
+     startright = 0;
 
-	//w = new QShortcut(Qt::Key_W, this, SLOT(start_forward()));
-	//w->setAutoRepeat(false);
-	
-	//QWidget::setShortcutAutoRepeat(false);
-/*http://doc.qt.nokia.com/4.6/qt4-network.html#tcp-client*/
-	remoteControl.infoLabel->setText("");
+     ipaddress = "";
+     port = "";
 
-}
+     //make a socket
+     socket = new QTcpSocket(this);
+     //connect(socket, SIGNAL(readyRead()), this, SLOT(readFortune()));
+     connect(socket, SIGNAL(error(QAbstractSocket::SocketError)),
+               this, SLOT(displayError(QAbstractSocket::SocketError)));
+
+     connect(socket, SIGNAL(connected()),this,SLOT(connectionSuccess()));
+
+     joystick = new Joystick();
+
+     connect (joystick,SIGNAL(buttonPress(int)), this, SLOT(buttonPress(int)));
+     connect (joystick,SIGNAL(buttonRelease(int)), this, SLOT(buttonRelease(int)));
+     connect (joystick,SIGNAL(axisEvent(int,int)), this, SLOT(axisEvent(int,int)));
+
+     //w = new QShortcut(Qt::Key_W, this, SLOT(start_forward()));
+     //w->setAutoRepeat(false);
+
+     //QWidget::setShortcutAutoRepeat(false);
+     /*http://doc.qt.nokia.com/4.6/qt4-network.html#tcp-client*/
+
+     remoteControl.statusBar->showMessage("Not connected");
+}//end constructor
 
 /*!
 *Opens a dialog box,  gets the ip address and port of the server.  
@@ -98,19 +98,29 @@ RemoteControl::RemoteControl(QMainWindow *parent)
 */
 void RemoteControl::serverConnect()
 {
-	//show a dialog box to get the ip and port
-	ConnectionInfo d;
-	if (d.exec())
-	{
-		qDebug()<<d.getIp();
-		qDebug()<<d.getPort();
-		if (d.getIp() != "" && d.getPort() != "")
-		{
-			socket->connectToHost(d.getIp(), d.getPort().toInt());
-			ipaddress = d.getIp();
-			port = d.getPort();
-		}
-	}
+     //show a dialog box to get the ip and port
+     ConnectionInfo d;
+     if (d.exec())
+     {
+          qDebug()<<d.getIp();
+          qDebug()<<d.getPort();
+          if (d.getIp() != "" && d.getPort() != "")
+          {
+               if(socket->state() == QAbstractSocket::UnconnectedState)
+               {
+                    socket->connectToHost(d.getIp(), d.getPort().toInt());
+                    ipaddress = d.getIp();
+                    port = d.getPort();
+               }
+               else if(socket->state() == QAbstractSocket::ConnectedState)
+               {
+                    socket->disconnectFromHost();
+                    socket->connectToHost(d.getIp(), d.getPort().toInt());
+                    ipaddress = d.getIp();
+                    port = d.getPort();
+               }
+          }
+     }
 }//end serverConnect
 
 /*!
@@ -119,7 +129,8 @@ void RemoteControl::serverConnect()
 void RemoteControl::displayError(QAbstractSocket::SocketError error)
 {
 	qDebug()<<"Failed to make a network connection!" << error;
-	remoteControl.infoLabel->setText("Connection failed!");
+	//remoteControl.infoLabel->setText("Connection failed!");
+     remoteControl.statusBar->showMessage("Connection failed!");
 }
 
 
@@ -128,7 +139,8 @@ void RemoteControl::displayError(QAbstractSocket::SocketError error)
  */
 void RemoteControl::connectionSuccess()
 {
-	remoteControl.infoLabel->setText("Connected to: " + ipaddress +":" +port);
+	//remoteControl.infoLabel->setText("Connected to: " + ipaddress +":" +port);
+     remoteControl.statusBar->showMessage("Connected to: " + ipaddress +":" +port);
 }
 
 /*!
