@@ -3,7 +3,7 @@ This is all the different applications that can be used for the truck.
 android - this directory contains the client application for android devices.  You can
 install this app on your phone or any other android powered device and control the truck 
 
-controllercode - this contains the code that runs on the arduino microcontroller that is 
+arduino - this contains the code that runs on the arduino microcontroller that is 
 mounted in the truck.
 
 java - This is the remote control client written in java
