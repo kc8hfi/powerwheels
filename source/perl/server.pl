@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Device::SerialPort;
-use Net::Address::IP::Local;
+#use Net::Address::IP::Local;
 use IO::Async::Listener;
 use IO::Async::Loop;
 use IO::Async::Timer::Periodic;
@@ -12,12 +12,12 @@ use IO::Async::Timer::Periodic;
 #make stdout unbuffered
 $| = 1; 
 
-my $host = "127.0.0.1";
+#my $host = "127.0.0.1";
 my $port = "4201";
-eval 
-{
-     $host = Net::Address::IP::Local->public;
-};
+# eval 
+# {
+#      $host = Net::Address::IP::Local->public;
+# };
 my $serialport= "";
 
 sub log_time
@@ -105,7 +105,7 @@ $listener->listen
 (
      addr => 
      { 
-          ip        =>   $host,
+          #ip        =>   $host,
           port      =>   $port,
           family    =>   "inet",
           socktype  =>   "stream",
@@ -113,7 +113,7 @@ $listener->listen
      on_listen =>   sub
      {    
           write_log(0,"Server Ready");
-          write_log(0,"ip:\t$host");
+          #write_log(0,"ip:\t$host");
           write_log(0,"port:\t$port");
           
           #list of all the ports that I've seen the arduino controllers show up on

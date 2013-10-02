@@ -6,7 +6,7 @@
 use strict;
 use warnings;
 
-use Net::Address::IP::Local;
+#use Net::Address::IP::Local;
 use IO::Async::Listener;
 use IO::Async::Loop;
 use IO::Async::Timer::Periodic;
@@ -14,12 +14,13 @@ use IO::Async::Timer::Periodic;
 #make stdout unbuffered
 $| = 1; 
 
-my $host = "127.0.0.1";
+#my $host = "127.0.0.1";
+#my $host = "";
 my $port = "4201";
-eval 
-{
-     $host = Net::Address::IP::Local->public;
-};
+#eval 
+#{
+#     $host = Net::Address::IP::Local->public;
+#};
 
 sub log_time
 {
@@ -104,17 +105,17 @@ $listener->listen
 (
      addr => 
      { 
-          ip        =>   $host,
+#          ip        =>   $host,
           port      =>   $port,
           family    =>   "inet",
           socktype  =>   "stream",
      },
      on_listen =>   sub
+
      {    
           write_log(0,"Server Ready");
-          write_log(0,"ip:\t$host");
+          #write_log(0,"ip:\t$host");
           write_log(0,"port:\t$port");
-          
      },
      on_resolve_error => sub { die "Cannot resolve - $_[0]\n"; },
      on_listen_error  => sub { die "Cannot listen\n"; }, 
