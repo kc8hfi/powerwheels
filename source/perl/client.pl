@@ -1,16 +1,5 @@
 #!/usr/bin/perl
 
-<<<<<<< HEAD
-=======
-use SDL;
-
-
-use SDL::Joystick;
-
-use SDL::Event;
-use SDL::Events;
-use SDLx::App;
->>>>>>> 83ed15b83576f8baf194d858b97d2e5d439a65e5
 use IO::Socket;
 
 $default = "192.168.0.5";
