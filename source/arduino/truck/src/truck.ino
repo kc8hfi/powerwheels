@@ -61,7 +61,7 @@ void setup()
 
 void logger(String t)
 {
-     Serial.println(t);
+     //Serial.println(t);
      Serial1.println(t);
 }
 
