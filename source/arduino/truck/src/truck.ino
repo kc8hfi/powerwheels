@@ -53,10 +53,8 @@ void setup()
      servo10.write(howfarlr);
      
      //log ready message
-     Serial.println("arduino ready");
-     Serial1.println("arduino ready");
+     logger("arduino ready");
      
-     //start the timer
 }
 
 void logger(String t)
@@ -89,50 +87,50 @@ EF - end firing
 void doSomething(String s)
 {
      time = millis();
-     String log = "receive: " + s + " - ";
+     String log = "receive: " + s;
      if(s == "BVF")
      {
-          logger(log + "begin vehicle forward");
+          logger(log);
           motor1.run(FORWARD);
      }
      else if(s == "EVF")
      {
-          logger(log + "end vehicle forward");
+          logger(log);
           motor1.run(RELEASE);
      }
      else if (s=="BVB")
      {
-          logger(log + "begin vehicle backward");          
+          logger(log);
           motor1.run(BACKWARD);
      }
      else if (s=="EVB")
      {
-          logger(log + "end vehicle backward");
+          logger(log);
           motor1.run(RELEASE);
      }
      else if (s=="BVL")
      {
-          logger(log + "begin vehicle left");
+          logger(log);
           motor3.run(FORWARD);
      }
      else if (s=="EVL")
      {
-          logger(log + "end vehicle left");
+          logger(log);
           motor3.run(RELEASE);
      }
      else if (s=="BVR")
      {
-          logger(log + "begin vehicle right");
+          logger(log);
           motor3.run(BACKWARD);
      }
      else if (s=="EVR")
      {
-          logger(log + "end vehicle right");
+          logger(log);
           motor3.run(RELEASE);
      }
      else if (s=="BTL")
      {
-          logger(log + "begin turret left");
+          logger(log);
           if (howfarlr <=95)
           {
                howfarlr = howfarlr + 5;
@@ -141,11 +139,11 @@ void doSomething(String s)
      }
      else if (s=="ETL")
      {
-          logger(log + "end turret left");
+          logger(log);
      }
      else if (s=="BTR")
      {
-          logger(log + "begin turret right");
+          logger(log);
           if (howfarlr >=5)
           {
                howfarlr = howfarlr - 5;
@@ -154,11 +152,11 @@ void doSomething(String s)
      }
      else if (s=="ETR")
      {
-          logger(log + "end turret right");
+          logger(log);
      }
      else if (s=="BTU")
      {
-          logger(log + "begin turret up");
+          logger(log);
           if (howfarud >=5)
           {
                howfarud = howfarud - 5;
@@ -167,11 +165,11 @@ void doSomething(String s)
      }
      else if (s=="ETU")
      {
-          logger(log + "end turret up");
+          logger(log);
      }
      else if (s=="BTD")
      {
-          logger(log + "begin turret down");
+          logger(log);
           if (howfarud <=170)
           {
                howfarud = howfarud + 5;
@@ -180,23 +178,22 @@ void doSomething(String s)
      }
      else if (s=="ETD")
      {
-          logger(log + "end turret down");
+          logger(log);
      }
      else if (s=="SF")
      {
-          logger(log + "start firing");
+          logger(log);
           motor2.run(FORWARD);
      }
      else if (s=="EF")
      {
-          logger(log + "end firing");
+          logger(log);
           motor2.run(RELEASE);
      }
-     else if (s=="ping")
-     {
-          Serial.println("pong");
-          Serial.println(millis());
-     }
+//      else if (s=="ping")
+//      {
+//           logger("pong");
+//      }
 }
 
 /*
@@ -206,8 +203,8 @@ void loop()
 {
      if (stringComplete)
      {
-          Serial.println(inputString);
-          Serial1.println(inputString);
+          //Serial.println(inputString);
+          //Serial1.println(inputString);
           doSomething(inputString);
           inputString = "";
           stringComplete = false;
