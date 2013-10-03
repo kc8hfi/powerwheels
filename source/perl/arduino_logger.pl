@@ -87,7 +87,7 @@ sub setup_device
      $heap->{console}->get("Ready: ");
      
      #need a file for logging
-     open (LOG, ">>arduino_log.txt");
+     open (LOG, ">>arduino.log");
      LOG->autoflush(1);
 }
 
