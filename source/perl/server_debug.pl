@@ -51,14 +51,29 @@ sub write_log
 
 my $loop = IO::Async::Loop->new;
 my $timer = IO::Async::Timer::Periodic->new(
-    interval => 3,
+     interval => 3,
 
-    on_tick => sub {
-       #print "3 seconds\n";
-    },
+     on_tick => sub 
+     {
+          print "ping arduino\n";
+     },
  );
 $timer->start;
+
+
+my $poller = IO::Async::Timer::Periodic->new(
+    interval => 5,
+
+    on_tick => sub {
+       print "5 seconds, poll something\n";
+    },
+ );
+$poller->start;
+
+
+
 $loop->add( $timer );
+$loop->add($poller);
 
 my $listener = IO::Async::Listener->new
 (

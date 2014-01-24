@@ -33,7 +33,7 @@ ConnectionInfo::ConnectionInfo()
 	connectInfo.ipLabel->setText("ip address");
 	connectInfo.portLabel->setText("port number");
 	
-	connectInfo.ipText->setText("192.168.0.35");
+	connectInfo.ipText->setText("localhost");
 	connectInfo.portText->setText("4201");
 }
 //connectInfo;

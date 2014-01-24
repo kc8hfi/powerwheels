@@ -3,22 +3,16 @@
 use strict;
 use warnings;
 
-use Device::SerialPort;
-#use Net::Address::IP::Local;
 use IO::Async::Listener;
 use IO::Async::Loop;
+use IO::Async::Stream;
 use IO::Async::Timer::Periodic;
+use IO::Termios;
 
 #make stdout unbuffered
 $| = 1; 
 
-#my $host = "127.0.0.1";
 my $port = "4201";
-# eval 
-# {
-#      $host = Net::Address::IP::Local->public;
-# };
-my $serialport= "";
 
 sub log_time
 {
@@ -48,29 +42,73 @@ sub write_log
 }
 
 my $loop = IO::Async::Loop->new;
-my $timer = IO::Async::Timer::Periodic->new(
-    interval => 3,
 
-    on_tick => sub {
-       #print "You've had 3 seconds\n";
-       $serialport->write("ping\n");
-    },
- );
+
+#connect to the arduino board
+#list of devices that i've seen the arduino on
+my $device;
+my @whichdevice = qw(/dev/ttyACM0 /dev/ttyACM1);
+foreach my $d(@whichdevice)
+{
+     $device = IO::Termios->open( $d,"115200,8,n,1"); 
+     if(defined($device))
+     {
+          #print "device is ok,  use $d\n";
+          #not sure if this is gonna fix the initial read
+          $device->flush;
+          last;
+     }
+}
+#this stream comes from the arduino
+my $stream = IO::Async::Stream->new( 
+     handle => $device,
+     
+      on_read => sub 
+      {
+          my ( $self, $buffref, $eof ) = @_;
+
+          while( $$buffref =~ s/^(.*\n)// ) 
+          {
+               print "Received from serial port: $1";
+               my $line = $1;
+          }
+          if( $eof ) 
+          {
+               print "EOF; last partial line is $$buffref\n";
+          }
+       return 0;
+     }
+);
+
+$loop->add($stream);
+
+#timer to ping the arduino every few seconds
+my $timer = IO::Async::Timer::Periodic->new(
+     interval => 5,      #how many seconds
+     on_tick => sub 
+     {
+          if (defined($stream->write_handle))
+          {         
+               $stream->write("ping\n");
+          }
+     },
+);
 $timer->start;
 $loop->add( $timer );
 
+#listen on the network for a connection to come in
 my $listener = IO::Async::Listener->new
 (
      on_stream => sub
      {
           my $self = shift;
-          my ( $stream ) = @_;
+          my ( $networkstream ) = @_;
           
-          my $socket = $stream->read_handle;
+          my $socket = $networkstream->read_handle;
           my $peeraddr = $socket->peerhost . ":" . $socket->peerport;
           
           write_log(1,"connection from $peeraddr");
-          $stream->configure
+          $networkstream->configure
           (
                on_read => sub
                {
@@ -86,7 +124,7 @@ my $listener = IO::Async::Listener->new
                          my $cmd = $1;
                          $cmd =~ s/[\r\n]+//;
                          write_log(1,"cmd: $cmd");
-                         $serialport->write($cmd."\n");
+                         $stream->write("$cmd\n");
                     }
                     return 0;
                },
@@ -95,7 +133,7 @@ my $listener = IO::Async::Listener->new
                     write_log(1,"connection from $peeraddr closed");
                },
           );
-          $loop->add($stream);
+          $loop->add($networkstream);
      },
 );
 
@@ -116,36 +154,62 @@ $listener->listen
           #write_log(0,"ip:\t$host");
           write_log(0,"port:\t$port");
           
-          #list of all the ports that I've seen the arduino controllers show up on
-          my @whichdevice = qw(/dev/ttyUSB0 /dev/ttyUSB1 /dev/ttyACM0 /dev/ttyACM1);
-          foreach my $s(@whichdevice)
-          {
-               #print "device is: ", $s,"\n";
-               #print "checking $s:\t";
-               $serialport = Device::SerialPort->new($s);
-               #print "$! is the error\n";
-               if ($serialport)
-               {
-                    write_log(0,"serial port:\t$s");
-                    $serialport->databits(8);
-                    $serialport->baudrate(115200);
-                    $serialport->parity("none");
-                    $serialport->stopbits(1);
-                    last;
-               }
-          }
-          if (!$serialport)
-          {
-               #if theres no arduino plugged in, don't go any farther
-               die "cannot connect to the serial port!\n";
-          }
-          
-          
      },
      on_resolve_error => sub { die "Cannot resolve - $_[0]\n"; },
      on_listen_error  => sub { die "Cannot listen\n"; }, 
 );
 
+
+
+# #read keyboard input here, and then send it to the arduino board
+# my $userstream = IO::Async::Stream->new(
+#      read_handle => \*STDIN,
+#      on_read => sub
+#      {
+#           my ( $self, $buffref, $eof ) = @_;
+# 
+#           while( $$buffref =~ s/^(.*\n)// ) 
+#           {
+#                my $cmd = $1;
+#                print "Receive: $1";
+#                #send this command to the arduino
+#                if (defined($stream->write_handle))
+#                {
+#                     $cmd =~ s/[\r\n]+//;
+#                     #c get gps coordinates
+#                     if ($cmd eq 'c' || $cmd eq 'C')
+#                     {
+#                          print "coords: \n";
+#                          print Dumper($gps_coords);
+#                          #print $ { $gps_coords->row }[3],"\n";  #latitude
+#                          #print $ { $gps_coords->row }[5],"\n";  #longitude
+#                          
+#                          #print Dumper($accelerometer);
+#                          #print Dumper($compass);
+#                     }
+#                     elsif($cmd eq 's' || $cmd eq 'S')
+#                     {
+#                          print $logfile Helper::log_time," ",Dumper($gps_coords);
+#                          print $logfile Helper::log_time," ",Dumper($accelerometer);
+#                          print $logfile Helper::log_time," ",Dumper($compass);
+#                     }
+#                     else
+#                     {
+#                          $stream->write("$cmd\n");
+#                     }
+#                }
+#                #print "new command? ";
+#           }
+# 
+#           if( $eof ) 
+#           {
+#                print "EOF; last partial line is $$buffref\n";
+#           }
+# 
+#           return 0;
+#      }
+# );
+# $loop->add($userstream);
 
 
 $loop->run;
