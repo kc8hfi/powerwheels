@@ -124,7 +124,10 @@ my $listener = IO::Async::Listener->new
                          my $cmd = $1;
                          $cmd =~ s/[\r\n]+//;
                          write_log(1,"cmd: $cmd");
-                         $stream->write("$cmd\n");
+                         if (defined($stream->write_handle))
+                         {
+                              $stream->write("$cmd\n");
+                         }
                     }
                     return 0;
                },
