@@ -185,6 +185,9 @@ class RemoteControl : public QMainWindow, private Ui_RemoteControlBase
                */
           void buttonRelease(int button);
           
+          
+          void heartBeat();
+          
      private:
           //The actual gui object
           Ui_RemoteControlBase remoteControl;
@@ -192,7 +195,10 @@ class RemoteControl : public QMainWindow, private Ui_RemoteControlBase
           //the actual connection to the server
           QTcpSocket *socket;
           
-          //joystick		
+          QTimer *timer;
+          int timerDelay;
+          
+          //joystick
           Joystick *joystick;
           
           int startfwd;

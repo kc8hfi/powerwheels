@@ -24,6 +24,7 @@ along with Remote Control.  If not, see <http://www.gnu.org/licenses/>.
 #include <QString>
 #include <QKeyEvent>
 #include <QShortcut>
+#include <QTimer>
 #include "about.h"
 #include "connectioninfo.h"
 #include "remotecontrol.h"
@@ -32,27 +33,28 @@ along with Remote Control.  If not, see <http://www.gnu.org/licenses/>.
 /*!
 *define a bunch of constants for the commands that get sent to the server
 */
-const QString START_VEHICLE_FORWARD	= 	"BVF";
-const QString STOP_VEHICLE_FORWARD 	= 	"EVF";
-const QString START_VEHICLE_REVERSE	= 	"BVB";
-const QString STOP_VEHICLE_REVERSE		=	"EVB";
-const QString START_VEHICLE_LEFT		=	"BVL";
-const QString STOP_VEHICLE_LEFT		= 	"EVL";
-const QString START_VEHICLE_RIGHT		= 	"BVR";
-const QString STOP_VEHICLE_RIGHT		= 	"EVR";
+const QString START_VEHICLE_FORWARD     = "BVF";
+const QString STOP_VEHICLE_FORWARD      = "EVF";
+const QString START_VEHICLE_REVERSE     = "BVB";
+const QString STOP_VEHICLE_REVERSE      = "EVB";
+const QString START_VEHICLE_LEFT        = "BVL";
+const QString STOP_VEHICLE_LEFT         = "EVL";
+const QString START_VEHICLE_RIGHT       = "BVR";
+const QString STOP_VEHICLE_RIGHT        = "EVR";
 
-const QString START_TURRET_LEFT		=	"BTL";
-const QString STOP_TURRET_LEFT		= 	"ETL";
-const QString START_TURRET_RIGHT		=	"BTR";
-const QString STOP_TURRET_RIGHT		=	"ETR";
-const QString START_TURRET_UP			= 	"BTU";
-const QString STOP_TURRET_UP			= 	"ETU";
-const QString START_TURRET_DOWN		=	"BTD";
-const QString STOP_TURRET_DOWN		= 	"ETD";
+const QString START_TURRET_LEFT         = "BTL";
+const QString STOP_TURRET_LEFT          = "ETL";
+const QString START_TURRET_RIGHT        = "BTR";
+const QString STOP_TURRET_RIGHT         = "ETR";
+const QString START_TURRET_UP           = "BTU";
+const QString STOP_TURRET_UP            = "ETU";
+const QString START_TURRET_DOWN         = "BTD";
+const QString STOP_TURRET_DOWN          = "ETD";
 
-const QString START_FIRE		= "SF";
-const QString STOP_FIRE		= "EF";
+const QString START_FIRE                = "SF";
+const QString STOP_FIRE                 = "EF";
 
+const QString HEART_BEAT                = "ping";
 /*!
 *set up a new RemoteControl object
 */
@@ -82,7 +84,12 @@ RemoteControl::RemoteControl(QMainWindow *parent)
      connect (joystick,SIGNAL(buttonPress(int)), this, SLOT(buttonPress(int)));
      connect (joystick,SIGNAL(buttonRelease(int)), this, SLOT(buttonRelease(int)));
      connect (joystick,SIGNAL(axisEvent(int,int)), this, SLOT(axisEvent(int,int)));
+     
+     //set up a new timer 
+     timer = new QTimer(this);
+     connect(timer, SIGNAL(timeout()), this, SLOT(heartBeat()));
 
+     timerDelay = 3000; //in milliseconds,  1000ms = 1s
      //w = new QShortcut(Qt::Key_W, this, SLOT(start_forward()));
      //w->setAutoRepeat(false);
 
@@ -100,6 +107,16 @@ void RemoteControl::about()
      About about;
      about.exec();
 }
+
+void RemoteControl::heartBeat()
+{
+     //qDebug()<<"timer fired";
+     QTextStream out(socket);
+     out << HEART_BEAT;
+     out << "\n";
+     
+}
+
 
 /*!
 *Opens a dialog box,  gets the ip address and port of the server.  
@@ -121,6 +138,7 @@ void RemoteControl::serverConnect()
                     socket->connectToHost(d.getIp(), d.getPort().toInt());
                     ipaddress = d.getIp();
                     port = d.getPort();
+                    timer->stop();
                }
                else if(socket->state() == QAbstractSocket::ConnectedState)
                {
@@ -142,6 +160,8 @@ void RemoteControl::serverDisconnect()
      {
           socket->disconnectFromHost();
           remoteControl.statusBar->showMessage("Not connected");
+          timer->stop();
+          qDebug()<<"stopped the timer";
      }
 }
 
@@ -150,8 +170,8 @@ void RemoteControl::serverDisconnect()
 */
 void RemoteControl::displayError(QAbstractSocket::SocketError error)
 {
-	qDebug()<<"Failed to make a network connection!" << error;
-	//remoteControl.infoLabel->setText("Connection failed!");
+     qDebug()<<"Failed to make a network connection!" << error;
+     //remoteControl.infoLabel->setText("Connection failed!");
      remoteControl.statusBar->showMessage("Connection failed!");
 }
 
@@ -161,8 +181,11 @@ void RemoteControl::displayError(QAbstractSocket::SocketError error)
  */
 void RemoteControl::connectionSuccess()
 {
-	//remoteControl.infoLabel->setText("Connected to: " + ipaddress +":" +port);
+     //remoteControl.infoLabel->setText("Connected to: " + ipaddress +":" +port);
      remoteControl.statusBar->showMessage("Connected to: " + ipaddress +":" +port);
+     qDebug()<<"start the timer";
+     timer->start(timerDelay);        //in milliseconds,  1000ms = 1s
+
 }
 
 /*!
@@ -170,66 +193,66 @@ void RemoteControl::connectionSuccess()
 */
 void RemoteControl::axisEvent(int axis, int value)
 {
-	if (axis == 1 && value == -32768)
-	{
-		//qDebug()<<"forward";
-		start_forward();
-		startfwd = 1;
-	}
-	if (axis == 1 && value == 32767)
-	{
-		//qDebug()<<"backward";
-		start_reverse();
-		startbwk = 1;
-	}
-	if (axis == 1 && value == 0)
-	{
-		if (startfwd == 1)
-		{
-			//qDebug()<<"stop forward";
-			stop_forward();
-			startfwd = 0;
-		}
-		if(startbwk == 1)
-		{
-			//qDebug()<<"stop backward";
-			stop_reverse();
-			startbwk = 0;
-		}
-		//qDebug()<<"stop forward or backward";
-	}
-	
-	//part of the code that deals with the x-axis
-	if (axis == 0 && value == -32768)
-	{
-		//qDebug()<<"left";
-		start_left();
-		startleft = 1;
-	}
-	if (axis == 0 && value == 32767)
-	{
-		//qDebug()<<"right";
-		start_right();
-		startright = 1;
-	}
-	if (axis == 0 && value == 0)
-	{
-		if (startleft == 1)
-		{
-			//qDebug()<<"stop left";
-			stop_left();
-			startleft = 0;
-		}
-		if(startright == 1)
-		{
-			//qDebug()<<"stop right";
-			stop_right();
-			startright = 0;
-		}
-		//qDebug()<<"stop forward or backward";
-	}
-	//qDebug()<<"axis: "<<axis<<" value:"<<value;
-}
+     if (axis == 1 && value == -32768)
+     {
+          //qDebug()<<"forward";
+          start_forward();
+          startfwd = 1;
+     }
+     if (axis == 1 && value == 32767)
+     {
+          //qDebug()<<"backward";
+          start_reverse();
+          startbwk = 1;
+     }
+     if (axis == 1 && value == 0)
+     {
+          if (startfwd == 1)
+          {
+               //qDebug()<<"stop forward";
+               stop_forward();
+               startfwd = 0;
+          }
+          if(startbwk == 1)
+          {
+               //qDebug()<<"stop backward";
+               stop_reverse();
+               startbwk = 0;
+          }
+          //qDebug()<<"stop forward or backward";
+     }
+     
+     //part of the code that deals with the x-axis
+     if (axis == 0 && value == -32768)
+     {
+          //qDebug()<<"left";
+          start_left();
+          startleft = 1;
+     }
+     if (axis == 0 && value == 32767)
+     {
+          //qDebug()<<"right";
+          start_right();
+          startright = 1;
+     }
+     if (axis == 0 && value == 0)
+     {
+          if (startleft == 1)
+          {
+               //qDebug()<<"stop left";
+               stop_left();
+               startleft = 0;
+          }
+          if(startright == 1)
+          {
+               //qDebug()<<"stop right";
+               stop_right();
+               startright = 0;
+          }
+          //qDebug()<<"stop forward or backward";
+     }
+     //qDebug()<<"axis: "<<axis<<" value:"<<value;
+}//end axisEvent
 
 /*!red = 0
  * yellow = 1
@@ -245,181 +268,180 @@ void RemoteControl::axisEvent(int axis, int value)
 
 void RemoteControl::buttonPress(int button)
 {
-	//qDebug()<<button<<" pressed";
-	switch(button)
-	{
-		case 0:
-			start_fire();
-			break;
-		case 2:
-			start_turret_up();
-			break;
-		case 3:
-			start_turret_down();
-			break;
-		case 4:
-			start_turret_left();
-			break;
-		case 5:
-			start_turret_right();
-			break;
-		
-	}
+     //qDebug()<<button<<" pressed";
+     switch(button)
+     {
+          case 0:
+               start_fire();
+          break;
+          case 2:
+               start_turret_up();
+          break;
+          case 3:
+               start_turret_down();
+          break;
+          case 4:
+               start_turret_left();
+          break;
+          case 5:
+               start_turret_right();
+          break;
+     }
 }//end buttonPress
 
 void RemoteControl::buttonRelease(int button)
 {
-	//qDebug()<<button<<" released";
-	switch(button)
-	{
-		case 0:
-			stop_fire();
-			break;
-		case 2:
-			stop_turret_up();
-			break;
-		case 3:
-			stop_turret_down();
-			break;
-		case 4:
-			stop_turret_left();
-			break;
-		case 5:
-			stop_turret_right();
-			break;
-	}
+     //qDebug()<<button<<" released";
+     switch(button)
+     {
+          case 0:
+               stop_fire();
+          break;
+          case 2:
+               stop_turret_up();
+          break;
+          case 3:
+               stop_turret_down();
+          break;
+          case 4:
+               stop_turret_left();
+          break;
+          case 5:
+               stop_turret_right();
+          break;
+     }
 }
 
 //sends the start forward command
 void RemoteControl::start_forward()
 {
-	//qDebug()<<"start forward";
-	QTextStream out(socket);
-	out << START_VEHICLE_FORWARD;
-	out << "\n";
+     //qDebug()<<"start forward";
+     QTextStream out(socket);
+     out << START_VEHICLE_FORWARD;
+     out << "\n";
 }
 
 //sends the stop forward command
 void RemoteControl::stop_forward()
 {
-	//qDebug()<<"stop forward";
-	QTextStream out(socket);
-	out << STOP_VEHICLE_FORWARD;
-	out << "\n";
+     //qDebug()<<"stop forward";
+     QTextStream out(socket);
+     out << STOP_VEHICLE_FORWARD;
+     out << "\n";
 }
 
 //sends the start reverse command
 void RemoteControl::start_reverse()
 {
-	//qDebug()<<"start going backward";
-	QTextStream out(socket);
-	out << START_VEHICLE_REVERSE;
-	out << "\n";
+     //qDebug()<<"start going backward";
+     QTextStream out(socket);
+     out << START_VEHICLE_REVERSE;
+     out << "\n";
 }
 
 //sends the stop reverse command
 void RemoteControl::stop_reverse()
 {
-	//qDebug()<<"stop going backward";
-	QTextStream out(socket);
-	out << STOP_VEHICLE_REVERSE;
-	out << "\n";
+     //qDebug()<<"stop going backward";
+     QTextStream out(socket);
+     out << STOP_VEHICLE_REVERSE;
+     out << "\n";
 }
 
 void RemoteControl::start_left()
 {
-	//qDebug()<<"start left";
-	QTextStream out(socket);
-	out << START_VEHICLE_LEFT;
-	out << "\n";
+     //qDebug()<<"start left";
+     QTextStream out(socket);
+     out << START_VEHICLE_LEFT;
+     out << "\n";
 }
 
 void RemoteControl::stop_left()
 {
-	//qDebug()<<"stop left";
-	QTextStream out(socket);
-	out << STOP_VEHICLE_LEFT;
-	out << "\n";
+     //qDebug()<<"stop left";
+     QTextStream out(socket);
+     out << STOP_VEHICLE_LEFT;
+     out << "\n";
 }
 
 void RemoteControl::start_right()
 {
-	//qDebug()<<"start right";
-	QTextStream out(socket);
-	out << START_VEHICLE_RIGHT;
-	out << "\n";
+     //qDebug()<<"start right";
+     QTextStream out(socket);
+     out << START_VEHICLE_RIGHT;
+     out << "\n";
 }
 
 void RemoteControl::stop_right()
 {
-	//qDebug()<<"stop right";
-	QTextStream out(socket);
-	out << STOP_VEHICLE_RIGHT;
-	out << "\n";
+     //qDebug()<<"stop right";
+     QTextStream out(socket);
+     out << STOP_VEHICLE_RIGHT;
+     out << "\n";
 }
 
 void RemoteControl::start_turret_left()
 {
-	//qDebug()<<"start turret left";
-	QTextStream out(socket);
-	out <<START_TURRET_LEFT;
-	out <<"\n";
+     //qDebug()<<"start turret left";
+     QTextStream out(socket);
+     out <<START_TURRET_LEFT;
+     out <<"\n";
 }
 
 void RemoteControl::stop_turret_left()
 {
-	//qDebug()<<"stop turret left";
-	QTextStream out(socket);
-	out <<STOP_TURRET_LEFT;
-	out <<"\n";
+     //qDebug()<<"stop turret left";
+     QTextStream out(socket);
+     out <<STOP_TURRET_LEFT;
+     out <<"\n";
 }
 
 void RemoteControl::start_turret_right()
 {
-	//qDebug()<<"start turret right";
-	QTextStream out(socket);
-	out <<START_TURRET_RIGHT;
-	out<<"\n";
+     //qDebug()<<"start turret right";
+     QTextStream out(socket);
+     out <<START_TURRET_RIGHT;
+     out<<"\n";
 }
 
 void RemoteControl::stop_turret_right()
 {
-	//qDebug()<<"stop turret right";
-	QTextStream out(socket);
-	out<<STOP_TURRET_RIGHT;
-	out<<"\n";
+     //qDebug()<<"stop turret right";
+     QTextStream out(socket);
+     out<<STOP_TURRET_RIGHT;
+     out<<"\n";
 }
 
 void RemoteControl::start_turret_up()
 {
-	//qDebug()<<"start turret up";
-	QTextStream out(socket);
-	out<<START_TURRET_UP;
-	out<<"\n";
+     //qDebug()<<"start turret up";
+     QTextStream out(socket);
+     out<<START_TURRET_UP;
+     out<<"\n";
 }
 
 void RemoteControl::stop_turret_up()
 {
-	//qDebug()<<"stop turret up";
-	QTextStream out(socket);
-	out<<STOP_TURRET_UP;
-	out<<"\n";
+     //qDebug()<<"stop turret up";
+     QTextStream out(socket);
+     out<<STOP_TURRET_UP;
+     out<<"\n";
 }
 
 void RemoteControl::start_turret_down()
 {
-	//qDebug()<<"start turret down";
-	QTextStream out(socket);
-	out<<START_TURRET_DOWN;
-	out<<"\n";
+     //qDebug()<<"start turret down";
+     QTextStream out(socket);
+     out<<START_TURRET_DOWN;
+     out<<"\n";
 }
 
 void RemoteControl::stop_turret_down()
 {
-	//qDebug()<<"stop turret down";
-	QTextStream out(socket);
-	out<<STOP_TURRET_DOWN;
-	out<<"\n";
+     //qDebug()<<"stop turret down";
+     QTextStream out(socket);
+     out<<STOP_TURRET_DOWN;
+     out<<"\n";
 }
 
 void RemoteControl::start_fire()

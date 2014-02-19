@@ -83,18 +83,18 @@ my $stream = IO::Async::Stream->new(
 $loop->add($stream);
 
 #timer to ping the arduino every few seconds
-my $timer = IO::Async::Timer::Periodic->new(
-     interval => 5,      #how many seconds
-     on_tick => sub 
-     {
-          if (defined($stream->write_handle))
-          {         
-               $stream->write("ping\n");
-          }
-     },
-);
-$timer->start;
-$loop->add( $timer );
+# my $timer = IO::Async::Timer::Periodic->new(
+#      interval => 5,      #how many seconds
+#      on_tick => sub 
+#      {
+#           if (defined($stream->write_handle))
+#           {         
+#                $stream->write("ping\n");
+#           }
+#      },
+# );
+# $timer->start;
+# $loop->add( $timer );
 
 #listen on the network for a connection to come in
 my $listener = IO::Async::Listener->new
