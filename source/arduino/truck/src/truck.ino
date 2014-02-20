@@ -1,4 +1,3 @@
-
 #include <Servo.h>
 #include <AFMotor.h>
 
@@ -54,7 +53,6 @@ void setup()
      
      //log ready message
      logger("arduino ready");
-     
 }
 
 void logger(String t)
@@ -88,47 +86,47 @@ void doSomething(String s)
 {
      time = millis();
      String log = "receive: " + s;
-     if(s == "BVF")
+     if(s == "BVF" || s == "bvf")
      {
           logger(log);
           motor1.run(FORWARD);
      }
-     else if(s == "EVF")
+     else if(s == "EVF" || s == "evf")
      {
           logger(log);
           motor1.run(RELEASE);
      }
-     else if (s=="BVB")
+     else if (s=="BVB" || s == "bvb")
      {
           logger(log);
           motor1.run(BACKWARD);
      }
-     else if (s=="EVB")
+     else if (s=="EVB" || s == "evb")
      {
           logger(log);
           motor1.run(RELEASE);
      }
-     else if (s=="BVL")
+     else if (s=="BVL" || s == "bvl")
      {
           logger(log);
           motor3.run(FORWARD);
      }
-     else if (s=="EVL")
+     else if (s=="EVL" || s == "evl")
      {
           logger(log);
           motor3.run(RELEASE);
      }
-     else if (s=="BVR")
+     else if (s=="BVR" || s == "bvr")
      {
           logger(log);
           motor3.run(BACKWARD);
      }
-     else if (s=="EVR")
+     else if (s=="EVR" || s == "evr")
      {
           logger(log);
           motor3.run(RELEASE);
      }
-     else if (s=="BTL")
+     else if (s=="BTL" || s == "btl")
      {
           logger(log);
           if (howfarlr <=95)
@@ -137,11 +135,11 @@ void doSomething(String s)
                servo10.write(howfarlr);
           }
      }
-     else if (s=="ETL")
+     else if (s=="ETL" || s == "etl")
      {
           logger(log);
      }
-     else if (s=="BTR")
+     else if (s=="BTR" || s == "btr")
      {
           logger(log);
           if (howfarlr >=5)
@@ -150,24 +148,25 @@ void doSomething(String s)
                servo10.write(howfarlr);
           }
      }
-     else if (s=="ETR")
+     else if (s=="ETR" || s == "etr")
      {
           logger(log);
      }
-     else if (s=="BTU")
+     else if (s=="BTU" || s == "btu")
      {
           logger(log);
           if (howfarud >=5)
+          
           {
                howfarud = howfarud - 5;
                servo9.write(howfarud);
           }        
      }
-     else if (s=="ETU")
+     else if (s=="ETU" || s =="etu")
      {
           logger(log);
      }
-     else if (s=="BTD")
+     else if (s=="BTD" || s == "btd")
      {
           logger(log);
           if (howfarud <=170)
@@ -176,16 +175,16 @@ void doSomething(String s)
                servo9.write(howfarud); 
           }
      }
-     else if (s=="ETD")
+     else if (s=="ETD" || s == "etd")
      {
           logger(log);
      }
-     else if (s=="SF")
+     else if (s=="SF" || s == "sf")
      {
           logger(log);
           motor2.run(FORWARD);
      }
-     else if (s=="EF")
+     else if (s=="EF" || s == "ef")
      {
           logger(log);
           motor2.run(RELEASE);

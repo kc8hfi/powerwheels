@@ -1,5 +1,10 @@
 #!/usr/bin/perl
 
+#before this scripts gets run,  the terminal port needs to be configured first
+#run this command:
+#stty -F /dev/ttyACM0 -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke
+#and then start this script.  
+
 use strict;
 use warnings;
 
@@ -50,9 +55,29 @@ my $device;
 my @whichdevice = qw(/dev/ttyACM0 /dev/ttyACM1);
 foreach my $d(@whichdevice)
 {
-     $device = IO::Termios->open( $d,"115200,8,n,1"); 
+     #$device->dtr_active(1);
+     
+     $device = IO::Termios->open( $d,); 
      if(defined($device))
      {
+          $device->set_mode("115200,8,n,1");
+          
+          #$device->setflag_icanon(0);
+          
+          #$device->setflag_echo(0);
+          
+         
+# [kc8hfi@bandit1 truck]$ stty -F /dev/ttyACM0
+# speed 115200 baud; line = 0;
+# -brkint -imaxbel
+# [kc8hfi@bandit1 truck]$ stty -F /dev/ttyACM0
+# speed 115200 baud; line = 0;
+# min = 0; time = 0;
+# -brkint -icrnl -imaxbel
+# -opost -onlcr
+# -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke
+# [kc8hfi@bandit1 truck]$ 
+          
           #print "device is ok,  use $d\n";
           #not sure if this is gonna fix the initial read
           $device->flush;
@@ -164,21 +189,21 @@ $listener->listen
 
 
 
-# #read keyboard input here, and then send it to the arduino board
-# my $userstream = IO::Async::Stream->new(
-#      read_handle => \*STDIN,
-#      on_read => sub
-#      {
-#           my ( $self, $buffref, $eof ) = @_;
-# 
-#           while( $$buffref =~ s/^(.*\n)// ) 
-#           {
-#                my $cmd = $1;
-#                print "Receive: $1";
-#                #send this command to the arduino
-#                if (defined($stream->write_handle))
-#                {
-#                     $cmd =~ s/[\r\n]+//;
+#read keyboard input here, and then send it to the arduino board
+my $userstream = IO::Async::Stream->new(
+     read_handle => \*STDIN,
+     on_read => sub
+     {
+          my ( $self, $buffref, $eof ) = @_;
+
+          while( $$buffref =~ s/^(.*\n)// ) 
+          {
+               my $cmd = $1;
+               print "Receive: $1";
+               #send this command to the arduino
+               if (defined($stream->write_handle))
+               {
+                    $cmd =~ s/[\r\n]+//;
 #                     #c get gps coordinates
 #                     if ($cmd eq 'c' || $cmd eq 'C')
 #                     {
@@ -200,19 +225,20 @@ $listener->listen
 #                     {
 #                          $stream->write("$cmd\n");
 #                     }
-#                }
-#                #print "new command? ";
-#           }
-# 
-#           if( $eof ) 
-#           {
-#                print "EOF; last partial line is $$buffref\n";
-#           }
-# 
-#           return 0;
-#      }
-# );
-# $loop->add($userstream);
+                    $stream->write("$cmd\n");
+               }
+               #print "new command? ";
+          }
+
+          if( $eof ) 
+          {
+               print "EOF; last partial line is $$buffref\n";
+          }
+
+          return 0;
+     }
+);
+$loop->add($userstream);
 
 
 $loop->run;
